@@ -1,6 +1,7 @@
 %%% This script is used to read the binary file produced by the DCA1000
 %%% and Mmwave Studio
-%%% Command to run in Matlab GUI - readDCA1000('<ADC capture bin file>') function [retVal] = readDCA1000(fileName)
+%%% Command to run in Matlab GUI - readDCA1000('<ADC capture bin file>') 
+function [retVal] = readDCA1000(fileName)
 %% global variables
 % change based on sensor config
 numADCSamples = 256; % number of ADC samples per chirp
