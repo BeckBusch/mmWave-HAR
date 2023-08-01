@@ -187,13 +187,29 @@ def train_model(model, train_data, train_labels, val_data = None, val_labels = N
 
     return model, train_hist, val_hist
 
+seq_length = 500 # This needs to be tailored - based on the number of frames in a captured sequence of activity data.
 
+model = CNN-LSTM(
+    n_features = 1,
+    n_hidden = 4,
+    seq_len = seq_length
+    n_layers = 1
+)
 
+model, train_hist, val_hist = train_model(
+    model, 
+    X_train,
+    y_train,
+    X_val,
+    y_val,
+    num_epochs = 100,
+    verbose = 10,
+    patience = 50
+)
 
-
-
-
-
+plt.plot(train_hist, label = "Training loss")
+plt.plot(val_hist, label = "Val loss")
+plt.legend()
 
 
 
