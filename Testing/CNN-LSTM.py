@@ -1,5 +1,4 @@
 # CNN-LSTM Model for testing on gathered human activity data.
-
 # Using pytorch implementation.
 
 # Import statements
@@ -50,7 +49,6 @@ Y_DIM = 100 # For example.
 XY_DIM = X_DIM * Y_DIM
 
 def format_sequences(data, count):
-
     px = [] # This list will contain a row of pixels for a single frame.
     py = [] # This list will contain a set of pixel rows for a single frame (one frame).
     pt = [] # This list will contain the sequence of frames.
@@ -135,6 +133,65 @@ class CNN-LSTM(nn.Module):
         last_time_step = lstm_out.view(self.seq_len - 1, len(seq), self.n_hidden)[-1]
         y_pred = self.linear(last_time_step)
         return y_pred
+
+def train_model(model, train_data, train_labels, val_data = None, val_labels = None, num_epochs = 100, verbose = 10, patience = 10):
+    loss_fn = torch.nn.L1Loss() # L1 loss by default.
+    optimiser = torch.optim.Adam(model.parameters(), lr = 0.001) # Default learning rate is 0.001.
+    # Histograms used to monitor training progress.
+    train_hist = []
+    val_hist = []
+
+    for t in range(num_epochs):
+        epoch_loss = 0
+
+        for idx, seq in enumerate(train_data):
+
+            # After every sample, we need to reset the hidden state.
+            model.reset_hidden_state()
+
+            seq = torch.unsqueeze(seq, 0)
+            y_pred = model(seq)
+            loss = loss_fn(y_pred[0].float(), train_labels[idx]) # Calculate the loss after 1 step, then update the weights.
+
+            optimiser.zero_grad()
+            loss.backward()
+            optimiser.step()
+
+            epoch_loss += loss.item()
+
+        train_hist.append(epoch_loss / len(train_data))
+
+        if val_data is not None:
+
+            with torch.no_grad():
+
+                val_loss = 0
+
+                for val_idx, val_seq in enumerate(val_data):
+
+                    model.reset_hidden_state() # Reset the hidden state with every sequence.
+
+                    val_seq = torch.unsqueeze(val_seq, 0)
+                    y_val_pred = model(val_seq)
+                    val_step_loss = loss_fun(y_val_pred[0].float(), val_labels[val_idx])
+
+                    val_loss += val_step_loss
+
+            val_hist_append(val_loss / len(val_data))
+
+            # Print the loss based on verbose value (pseudo-verbose).
+            if t % verbose == 0:
+            print(f'Epoch {t} train loss: {epoch_loss / len(train_data)} val loss: {val_loss / len(val_data})
+
+            # Can add early stopping if wanted, not using currently.
+
+    return model, train_hist, val_hist
+
+
+
+
+
+
 
 
 
