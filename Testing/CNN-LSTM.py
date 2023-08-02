@@ -8,16 +8,16 @@ import os
 import pandas as pd
 from tqdm import tqdm
 import seaborn as sns
-from pylabimport rcParams
+from pylab import rcParams
 import matplotlib.pyplot as plt
 from matplotlib import rc
 from sklearn.preprocessing import MinMaxScaler
 from pandas.plotting import register_matplotlib_converters
 from torch import nn, optim
 
-# Matplotlib additional arguments.
-%matplotlib inline
-%config InlineBackend.figure_format='retina'
+# Matplotlib additional arguments (jupyter notebook only).
+# %matplotlib inline
+# %config InlineBackend.figure_format='retina'
 
 sns.set(style='whitegrid', palette='muted', font_scale=1.2)
 rcParams['figure.figsize'] = 14, 10
