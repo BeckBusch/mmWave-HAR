@@ -200,7 +200,7 @@ function dp_exportData(rawDataFileName, radarCubeDataFileName)
     global Params
     
     % Prepare data to be saved in mat-file
-    if ((~strcmp(rawDataFileName, '')) || (~strcmp(rawDataFileName, '')))
+    if ((~strcmp(rawDataFileName, '')) || (~strcmp(radarCubeDataFileName, '')))
         for frameIdx=1:Params.NFrame
             dp_updateFrameData(frameIdx);
             rawADCData{frameIdx} = dataSet.rawDataUint16;
@@ -221,7 +221,7 @@ function dp_exportData(rawDataFileName, radarCubeDataFileName)
     end
     
     % Export rangeFFT data
-    if (~strcmp(rawDataFileName, ''))
+    if (~strcmp(radarCubeDataFileName, ''))
         radarCubeParams = Params.radarCubeParams;
         radarCube.rfParams = Params.RFParams;
         radarCube.data = radarCubeData;
