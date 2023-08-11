@@ -82,7 +82,7 @@
 %          - 'debug plot', flag to enable plot of raw data and radar cube
 %
 %
-function rawDataReader(setupJsonFileName, rawDataFileName, radarCubeDataFileName, debugPlot)
+function  [dataCube] = rawDataReader(setupJsonFileName, rawDataFileName, radarCubeDataFileName, debugPlot, binFilePath)
     close all;
     
     % Global parameters
@@ -103,17 +103,20 @@ function rawDataReader(setupJsonFileName, rawDataFileName, radarCubeDataFileName
     fprintf('mmwave Device:%s\n', setupJSON.mmWaveDevice);
     
     % Read bin file name
-    binFilePath = setupJSON.capturedFiles.fileBasePath;
+    %binFilePath = setupJSON.capturedFiles.fileBasePath;
     numBinFiles = length(setupJSON.capturedFiles.files);
-    if( numBinFiles < 1)
-        error('Bin File is not available');
-    end  
+    %if( numBinFiles < 1)
+    %    error('Bin File is not available');
+    %end  
     Params.numBinFiles = numBinFiles;
     
-    for idx=1:numBinFiles
-        binFileName{idx} = strcat(binFilePath, '\', setupJSON.capturedFiles.files(idx).processedFileName);
-    end
-    
+    %for idx=1:numBinFiles
+    %    binFileName{idx} = strcat(binFilePath, '\', setupJSON.capturedFiles.files(idx).processedFileName);
+        binFileName{1} = binFilePath;
+    %end
+    %}
+
+
     % Generate ADC data parameters
     adcDataParams = dp_generateADCDataParams(mmwaveJSON);
 
@@ -139,7 +142,8 @@ function rawDataReader(setupJsonFileName, rawDataFileName, radarCubeDataFileName
     % Open raw data from file
     Params.NFrame = 0;
     for idx = 1:numBinFiles
-        [Params.fid_rawData(idx), errmsg] = fopen(binFileName{idx}, 'r');
+        [Params.fid_rawData(idx), errmsg] = fopen(binFilePath, 'r');
+        %[Params.fid_rawData(idx), errmsg] = fopen(binFileName{idx}, 'r');
         if(Params.fid_rawData(idx) == -1)
             fprintf("Can not open Bin file %s, - %s\n",binFileName{idx}, errmsg); 
             error('Quit with error');
@@ -157,7 +161,7 @@ function rawDataReader(setupJsonFileName, rawDataFileName, radarCubeDataFileName
     end
     
     % Export data
-    dp_exportData(rawDataFileName, radarCubeDataFileName);
+    dataCube = dp_exportData(rawDataFileName, radarCubeDataFileName);
     
     % Start example UI and update time domain/range Profile plots
     if(debugPlot)
@@ -195,12 +199,12 @@ end
 %                   export1DFFTDataFile - file name to export 1D FFT data
 %   Output:         mat files
 %   -----------------------------------------------------------------------
-function dp_exportData(rawDataFileName, radarCubeDataFileName)
+function [retVal] = dp_exportData(rawDataFileName, radarCubeDataFileName)
     global dataSet
     global Params
     
     % Prepare data to be saved in mat-file
-    if ((~strcmp(rawDataFileName, '')) || (~strcmp(radarCubeDataFileName, '')))
+    if ((~strcmp(rawDataFileName, '')) || (~strcmp(radarCubeDataFileName, '')) || 1)
         for frameIdx=1:Params.NFrame
             dp_updateFrameData(frameIdx);
             rawADCData{frameIdx} = dataSet.rawDataUint16;
@@ -221,7 +225,7 @@ function dp_exportData(rawDataFileName, radarCubeDataFileName)
     end
     
     % Export rangeFFT data
-    if (~strcmp(radarCubeDataFileName, ''))
+    if (~strcmp(radarCubeDataFileName, '') || 1)
         radarCubeParams = Params.radarCubeParams;
         radarCube.rfParams = Params.RFParams;
         radarCube.data = radarCubeData;
@@ -231,8 +235,9 @@ function dp_exportData(rawDataFileName, radarCubeDataFileName)
         radarCube.dim.numRangeBins = radarCubeParams.numRangeBins;
         radarCube.dim.iqSwap = radarCubeParams.iqSwap;
         
-        % Save params and data to mat file
-        save (radarCubeDataFileName,'radarCube', '-v7.3');
+        % Save params and data to mat file, currently disabled
+        %save (radarCubeDataFileName,'radarCube', '-v7.3');
+        retVal = radarCube;
     end
 end
 %   -----------------------------------------------------------------------
@@ -1319,3 +1324,4 @@ global ui
                 'ColumnWidth', 'auto',...
                 'RowName',[]);                                   
 end
+
