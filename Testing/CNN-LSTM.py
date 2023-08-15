@@ -14,6 +14,13 @@ from matplotlib import rc
 from sklearn.preprocessing import MinMaxScaler
 from pandas.plotting import register_matplotlib_converters
 from torch import nn, optim
+from enum import enum
+
+# Class names will change based on the information being fed to the network; this is just an example.
+class ClassNames(enum):
+    JUMPING = 0
+    WALKING = 1
+    CLAPPING = 2
 
 # Matplotlib additional arguments (jupyter notebook only).
 # %matplotlib inline
@@ -54,6 +61,7 @@ def format_sequences(data, count):
     pt = [] # This list will contain the sequence of frames.
 
     classes = [] # This list will contain the classes for each of the activity sequences.
+    class_nums = [] # This list con
 
     xptr = 0 # Pointer for the end of the most recent row.
     yptr = 0 # Pointer for the end of the most recent frame.
@@ -73,8 +81,20 @@ def format_sequences(data, count):
             yptr += 1
             xptr = 0
 
+    # Now we need to convert the classes to a numerical (enumerated) representation.
+    for i in range(len(classes)):
+        this_class = classes[i].split('_')[1]
+        # Can replace this with a better structure if needed, for 3 classes this should be sufficient for now.
+        if this_class == "jump":
+            class_nums.append(ClassNames.JUMPING)
+        else if this_class == "walk":
+            class_nums.append(ClassNames.WALKING)
+        else if this_class == "clap":
+            class_nums.append(ClassNames.CLAPPING)
+
     # At the end of this code execution, pt will contain lists of lists, representing the 2D images.
-    return pt, classes
+    # Class nums contains a numerical representation of the classes, which can be used for training purposes.
+    return pt, class_nums
 
 # Format the data from csv.
 X, y = format_sequences(activity_data, activity_count)
