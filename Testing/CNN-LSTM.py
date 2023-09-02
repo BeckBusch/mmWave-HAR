@@ -8,16 +8,16 @@ import os
 import pandas as pd
 from tqdm import tqdm
 import seaborn as sns
-from pylab import rcParams
+# from pylab import rcParams
 import matplotlib.pyplot as plt
 from matplotlib import rc
 from sklearn.preprocessing import MinMaxScaler
 from pandas.plotting import register_matplotlib_converters
 from torch import nn, optim
-from enum import enum
+from enum import Enum
 
 # Class names will change based on the information being fed to the network; this is just an example.
-class ClassNames(enum):
+class ClassNames(Enum):
     JUMPING = 0
     WALKING = 1
     CLAPPING = 2
@@ -27,13 +27,18 @@ class ClassNames(enum):
 # %config InlineBackend.figure_format='retina'
 
 sns.set(style='whitegrid', palette='muted', font_scale=1.2)
-rcParams['figure.figsize'] = 14, 10
+# rcParams['figure.figsize'] = 14, 10
 register_matplotlib_converters()
 RANDOM_SEED = 33
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
 
-activity_data = pd.read_csv('activity_data.csv') # We are assuming that the data is in csv file format here, if it isn't, then we need to do some additional pre-processing.
+path = 'C:\\Data\\output.csv' # Path to the csv file with all of the activity data.
+print(f"Path being used is: "{path}"")
+
+activity_data = pd.read_csv(path) # We are assuming that the data is in csv file format here, if it isn't, then we need to do some additional pre-processing.
+print("Activity data has been read in")
+# print(activity_data[0]) # TESTING PRINT
 
 # Assume the data is in the format:
 # Activity sample 1: Class, Image 1, Image 2, Image 3, etc. 
@@ -47,7 +52,7 @@ activity_data = pd.read_csv('activity_data.csv') # We are assuming that the data
 
 # Start by getting the number of lines in the csv, this is how many activities we have data for.
 
-reader = csv.reader(open('activity_data.csv'))
+reader = csv.reader(open(path))
 activity_count = len(list(reader))
 
 # Image dimensions are based on the radar configuration, these need to be set and changed inside of this file accordingly.
@@ -66,7 +71,8 @@ def format_sequences(data, count):
     xptr = 0 # Pointer for the end of the most recent row.
     yptr = 0 # Pointer for the end of the most recent frame.
 
-    for i in range(count):
+    # We need to start at 1 because the first values are not reliable.
+    for i in range(1, count):
         this_activity = activity_data.iloc[i] # Get the next activity.
         classes.append(this_activity.iloc[0]) # Append the class.
         this_activity = this_activity.iloc[1:] # Remove the class before formatting the rest of the data.
@@ -87,9 +93,9 @@ def format_sequences(data, count):
         # Can replace this with a better structure if needed, for 3 classes this should be sufficient for now.
         if this_class == "jump":
             class_nums.append(ClassNames.JUMPING)
-        else if this_class == "walk":
+        elif this_class == "walk":
             class_nums.append(ClassNames.WALKING)
-        else if this_class == "clap":
+        elif this_class == "clap":
             class_nums.append(ClassNames.CLAPPING)
 
     # At the end of this code execution, pt will contain lists of lists, representing the 2D images.
@@ -122,17 +128,17 @@ y_val = make_Tensor(y_val)
 X_test = make_Tensor(X_test)
 y_test = make_Tensor(y_test)
 
-class CNN-LSTM(nn.Module):
+class CNNLSTM(nn.Module):
     def __init__(self, n_features, n_hidden, seq_len, n_layers):
-        super(CNN-LSTM, self).__init__()
+        super(CNNLSTM, self).__init__()
         self.n_hidden = n_hidden
         self.seq_len = seq_len
         self.n_layers = n_layers
         # 2D CNN layer.
         self.c = nn.Conv2d(in_channels = 1, out_channels = 1, kernel_size = 5, stride = 3)
         self.lstm = nn.LSTM(
-            input_size = n_features
-            hidden_size = n_hidden
+            input_size = n_features,
+            hidden_size = n_hidden,
             num_layers = n_layers
         )
         self.linear = nn.Linear(in_features = n_hidden, out_features = 1)
@@ -140,7 +146,7 @@ class CNN-LSTM(nn.Module):
     # IMPORTANT! This assumes that the sequences input from the csv are of a uniform length - if for some reason they are not, you need to add additional code to make sure that they are the same length.
     def reset_hidden_state(self):
         self.hidden = (
-            torch.zeros(self.n_layers, self.seq_len - 1, self.n_hidden)
+            torch.zeros(self.n_layers, self.seq_len - 1, self.n_hidden),
             torch.zeros(self.n_layers, self.seq_len - 1, self.n_hidden)
         )
 
@@ -201,7 +207,7 @@ def train_model(model, train_data, train_labels, val_data = None, val_labels = N
 
             # Print the loss based on verbose value (pseudo-verbose).
             if t % verbose == 0:
-            print(f'Epoch {t} train loss: {epoch_loss / len(train_data)} val loss: {val_loss / len(val_data})
+                print(f'Epoch {t} train loss: {epoch_loss / len(train_data)} val loss: {val_loss / len(val_data)}')
 
             # Can add early stopping if wanted, not using currently.
 
@@ -209,10 +215,10 @@ def train_model(model, train_data, train_labels, val_data = None, val_labels = N
 
 seq_length = 500 # This needs to be tailored - based on the number of frames in a captured sequence of activity data.
 
-model = CNN-LSTM(
+model = CNNLSTM(
     n_features = 1,
     n_hidden = 4,
-    seq_len = seq_length
+    seq_len = seq_length,
     n_layers = 1
 )
 
@@ -227,6 +233,7 @@ model, train_hist, val_hist = train_model(
     patience = 50
 )
 
+plt.figure(figsize = (14, 10)) # Attempt to set the figure size using an alternative method.
 plt.plot(train_hist, label = "Training loss")
 plt.plot(val_hist, label = "Val loss")
 plt.legend()
