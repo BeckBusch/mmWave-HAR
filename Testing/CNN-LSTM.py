@@ -77,7 +77,7 @@ print("Activity data has been read in")
 
 # Start by getting the number of lines in the csv, this is how many activities we have data for.
 
-print(f"Activity count is {activity_count}")
+print(f"Activity count is {activity_count}\n")
 
 # Image dimensions are based on the radar configuration, these need to be set and changed inside of this file accordingly.
 X_DIM = 50 # For example.
@@ -89,8 +89,13 @@ def format_sequences(df, count):
     py = [] # This list will contain a set of pixel rows for a single frame (one frame).
     pt = [] # This list will contain the sequence of frames.
 
+    pT = [] # This list will contain everything (one item per class label).
+
+    pp = np.zeros(X_DIM) # This is a compression array, used for storing compressed pixel values.
+    vert_comp_factor = 10 # Vertical compression factor (y values).
+
     classes = [] # This list will contain the classes for each of the activity sequences.
-    class_nums = [] # This list con
+    class_nums = [] # This list contains the enumerated classes.
 
     xptr = 0 # Pointer for the end of the most recent row.
     yptr = 0 # Pointer for the end of the most recent frame.
@@ -98,29 +103,40 @@ def format_sequences(df, count):
     df = df.T # Transpose the data frame.
 
     # We need to start at 1 because the first values are not reliable.
-    for i in range(0, count - 1):
+    for i in range(count):
         this_activity = df.iloc[i] # Get the next activity.
         classes.append(this_activity.iloc[0]) # Append the class.
         this_activity = this_activity.iloc[1:] # Remove the class before formatting the rest of the data.
         this_activity = this_activity.iloc[:500000]
-        print(len(this_activity))
-        print(this_activity)
+        print(i)
         #print(this_activity)
         # This will continue for the required number of frame iterations.
         for j in range(round(len(this_activity) / XY_DIM)):
             for k in range(Y_DIM):
                 px = this_activity.iloc[xptr * X_DIM + yptr * XY_DIM: (xptr + 1) * X_DIM + yptr * XY_DIM]
-                py.append(px)
+                if (len(px) != X_DIM) :
+                    px = np.zeros(X_DIM)
+                pp = np.add(pp, px)
+                if (k % vert_comp_factor == 0):
+                    pp = np.divide(pp, vert_comp_factor)
+                    py.append(pp)
+                    pp = np.zeros(X_DIM)
                 xptr += 1
             pt.append(py)
+            py = [] # Reset py.
             yptr += 1
             xptr = 0
+        pp = np.zeros(X_DIM) # Reset after each inner loop.
+        pT.append(pt)
+        pt = [] # Reset pt.
 
     # Now we need to convert the classes to a numerical (enumerated) representation.
     for i in range(len(classes)):
         this_class = classes[i].split('_')[1]
         # Can replace this with a better structure if needed, for 3 classes this should be sufficient for now.
         if this_class == "jump":
+            class_nums.append(ClassNames.JUMPING)
+        elif this_class == "jumps":
             class_nums.append(ClassNames.JUMPING)
         elif this_class == "walk":
             class_nums.append(ClassNames.WALKING)
@@ -129,13 +145,19 @@ def format_sequences(df, count):
 
     # At the end of this code execution, pt will contain lists of lists, representing the 2D images.
     # Class nums contains a numerical representation of the classes, which can be used for training purposes.
-    return pt, class_nums
+    print('\n')
+    print(len(pT), len(class_nums))
+    return pT, class_nums
 
 # Format the data from csv.
 X, y = format_sequences(df, activity_count)
+print("Formatting finished")
+print(X)
+print(y)
 
 scaler = MinMaxScaler()
 X = scaler.fit_transform(X) # Normalise the input data.
+print("Fitting finished")
 
 # Divide the dataset into training, validation and testing sets.
 train_size = int(activity_count * 0.8)
@@ -228,11 +250,11 @@ def train_model(model, train_data, train_labels, val_data = None, val_labels = N
 
                     val_seq = torch.unsqueeze(val_seq, 0)
                     y_val_pred = model(val_seq)
-                    val_step_loss = loss_fun(y_val_pred[0].float(), val_labels[val_idx])
+                    val_step_loss = loss_fn(y_val_pred[0].float(), val_labels[val_idx])
 
                     val_loss += val_step_loss
 
-            val_hist_append(val_loss / len(val_data))
+            val_hist.append(val_loss / len(val_data))
 
             # Print the loss based on verbose value (pseudo-verbose).
             if t % verbose == 0:
