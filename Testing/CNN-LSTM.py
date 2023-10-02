@@ -16,6 +16,7 @@ from pandas.plotting import register_matplotlib_converters
 from torch import nn, optim
 from enum import Enum
 import csv
+import time
 
 # Class names will change based on the information being fed to the network; this is just an example.
 class ClassNames(Enum):
@@ -101,10 +102,14 @@ def format_sequences(df, count):
     yptr = 0 # Pointer for the end of the most recent frame.
 
     df = df.T # Transpose the data frame.
+    #print(df[0])
+    #print(df[1])
 
     # We need to start at 1 because the first values are not reliable.
     for i in range(count):
         this_activity = df.iloc[i] # Get the next activity.
+        #print(this_activity)
+        #print(this_activity.iloc[0])
         classes.append(this_activity.iloc[0]) # Append the class.
         this_activity = this_activity.iloc[1:] # Remove the class before formatting the rest of the data.
         this_activity = this_activity.iloc[:500000]
@@ -113,7 +118,7 @@ def format_sequences(df, count):
         # This will continue for the required number of frame iterations.
         for j in range(round(len(this_activity) / XY_DIM)):
             for k in range(Y_DIM):
-                px = this_activity.iloc[xptr * X_DIM + yptr * XY_DIM: (xptr + 1) * X_DIM + yptr * XY_DIM]
+                px = this_activity.iloc[xptr * X_DIM + yptr * XY_DIM : (xptr + 1) * X_DIM + yptr * XY_DIM]
                 if (len(px) != X_DIM) :
                     px = np.zeros(X_DIM)
                 pp = np.add(pp, px)
@@ -152,12 +157,23 @@ def format_sequences(df, count):
 # Format the data from csv.
 X, y = format_sequences(df, activity_count)
 print("Formatting finished")
-print(X)
-print(y)
+#print(X)
+#print(y)
+
+print(np.shape(X))
+
+time.sleep(10)
 
 scaler = MinMaxScaler()
+# X = np.ravel(X) # 1D array
+# print(X[1])
+# print(X[1])
+# print(X[2])
+X = np.reshape(X, (60, 1000))
 X = scaler.fit_transform(X) # Normalise the input data.
 print("Fitting finished")
+print(X)
+time.sleep(1)
 
 # Divide the dataset into training, validation and testing sets.
 train_size = int(activity_count * 0.8)
