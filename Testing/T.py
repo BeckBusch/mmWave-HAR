@@ -13,12 +13,15 @@ from pandas.plotting import register_matplotlib_converters
 from torch import nn, optim
 from enum import Enum
 import csv
+import sys
 
 # TODO:
 
 # Defines
-INPUT_MIN_FRAMES = 8 # placeholder
-INPUT_MAX_FRAMES = 64 # placeholder
+TARGET_FRAMES = 8 # Input size to the classifier that we want to reduce to.
+INTERPOLATION_FRAMES = TARGET_FRAMES + 2 # Need 2 additional frames, 1 for final frame which is removed, and first frame is not used.
+
+STEP_SIZE = 8 # Number of frames to step across.
 
 # From planning:
 # Input size (min e.g. 8 to max e.g. 64)
@@ -149,14 +152,62 @@ print("Formatting finished")
 print(X)
 print(y)
 
-scaler = MinMaxScaler()
-X = scaler.fit_transform(X) # Normalise the input data.
-print("Fitting finished")
-
 # Using a generative model, the input size should be reduced to the number of frames that will be used for classification purposes.
 
 # Lets say that the input is of a fixed length between 4 and 12s for example. And that there are 3 possible input lengths, of 4s, 8s and 12s.
 # We can refactor the input to a fixed number of "critical" frames, e.g. 8 frames to be passed on.
+
+# Create an array to hold all the selected frames for each activity. Activity lengths can be arbitrary here, they should be uniformly scaled down to the correct size.
+all_select_frames = []
+for j in range(len(X)):
+    # Create an array containing the average pixel value for each frame.
+    averages = []
+    this_activity = X.iloc[j]
+    for k in range(len(this_activity)):
+        this_frame = this_activity.iloc[k]
+        this_avg = np.average(this_frame) # Get the average pixel value for this frame.
+        averages.append(this_avg)
+    max_frames = []
+    select_frames = []
+    # We want half of the target frames to be peak values, hence divide by 2.
+    for n in range(INTERPOLATION_FRAMES / 2):
+        section_size = np.floor(len(averages) / (INTERPOLATION_FRAMES / 2))
+        current_max_index = averages.index(max(averages.iloc[n * section_size : (n + 1) * section_size]))
+        max_frames.append(current_max_index)
+    # After the below loop, we should end up with TARGET_FRAMES number of frames in select_frames
+    for n in range(INTERPOLATION_FRAMES / 2 - 1):
+        current_max_index = max_frames.iloc[n]
+        current_min_index = round(max_frames.iloc[n] + max_frames.iloc[n + 1]) / 2
+        # Attach the next pair of min/max frames.
+        select_frames.append(current_max_index)
+        select_frames.append(current_min_index)
+    all_select_frames.append(select_frames)
+
+        
+
+
+
+
+# all_min = []
+
+# # For the required number of passes...
+# for j in range(len(X) / STEP_SIZE):
+#     this_frames = X.iloc[:j * STEP_SIZE]
+#     # For the required resolution according to the current pass length.
+#     for k in range(len(this_frames) / INPUT_MIN_FRAMES)
+
+
+
+
+scaler = MinMaxScaler()
+X = scaler.fit_transform(X) # Normalise the input data.
+print("Fitting finished")
+
+
+
+
+
+
 
 # Divide the dataset into training, validation and testing sets.
 train_size = int(activity_count * 0.8)
