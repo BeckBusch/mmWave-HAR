@@ -183,31 +183,20 @@ for j in range(len(X)):
         select_frames.append(current_min_index)
     all_select_frames.append(select_frames)
 
-        
-
-
-
-
-# all_min = []
-
-# # For the required number of passes...
-# for j in range(len(X) / STEP_SIZE):
-#     this_frames = X.iloc[:j * STEP_SIZE]
-#     # For the required resolution according to the current pass length.
-#     for k in range(len(this_frames) / INPUT_MIN_FRAMES)
-
-
-
-
+# all_select_frames now contains all of the reduced format activity data INDICES, this can used in conjunction with the actual data in X, to feed to the classifier for training.
 scaler = MinMaxScaler()
 X = scaler.fit_transform(X) # Normalise the input data.
 print("Fitting finished")
 
+all_frames = []
+for j in all_select_frames:
+    this_indices = all_select_frames[j]
+    this_frames = []
+    for k in range(TARGET_FRAMES):
+        this_frames.append(X[this_indices[k]])
+    all_frames.append(this_frames)
 
-
-
-
-
+X = all_frames # Re-assign the variable name so we don't have to change the other code later.
 
 # Divide the dataset into training, validation and testing sets.
 train_size = int(activity_count * 0.8)
