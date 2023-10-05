@@ -31,6 +31,23 @@ STEP_SIZE = 8 # Number of frames to step across.
 
 # Continuous input stream size is variable from starting point up to maximum, which is defined.
 
+# Class names will change based on the information being fed to the network; this is just an example.
+class ClassNames(Enum):
+    JUMPING = 0
+    WALKING = 1
+    CLAPPING = 2
+
+# Matplotlib additional arguments (jupyter notebook only).
+# %matplotlib inline
+# %config InlineBackend.figure_format='retina'
+
+sns.set(style='whitegrid', palette='muted', font_scale=1.2)
+# rcParams['figure.figsize'] = 14, 10
+register_matplotlib_converters()
+RANDOM_SEED = 33
+np.random.seed(RANDOM_SEED)
+torch.manual_seed(RANDOM_SEED)
+
 path = 'C:\\Data\\output.csv' # Path to the csv file with all of the activity data.
 print(f"Path being used is: {path}")
 
@@ -98,33 +115,49 @@ def format_sequences(df, count):
     yptr = 0 # Pointer for the end of the most recent frame.
 
     df = df.T # Transpose the data frame.
+    #print(df[0])
+    #print(df[1])
 
     # We need to start at 1 because the first values are not reliable.
     for i in range(count):
         this_activity = df.iloc[i] # Get the next activity.
+        #print(this_activity)
+        #print(this_activity.iloc[0])
         classes.append(this_activity.iloc[0]) # Append the class.
         this_activity = this_activity.iloc[1:] # Remove the class before formatting the rest of the data.
         this_activity = this_activity.iloc[:500000]
         print(i)
+        # print(this_activity[:20])
+        # print("\n\n")
         #print(this_activity)
         # This will continue for the required number of frame iterations.
         for j in range(round(len(this_activity) / XY_DIM)):
             for k in range(Y_DIM):
-                px = this_activity.iloc[xptr * X_DIM + yptr * XY_DIM: (xptr + 1) * X_DIM + yptr * XY_DIM]
+                px = this_activity.iloc[xptr * X_DIM + yptr * XY_DIM : (xptr + 1) * X_DIM + yptr * XY_DIM].to_numpy()
+                # If there are zeros where there shouldn't be, the below code handles this so it doesn't break everything.
+                # print(px[:10])
+                # print(pp[:10])
                 if (len(px) != X_DIM) :
                     px = np.zeros(X_DIM)
                 pp = np.add(pp, px)
+                # print(pp[:10])
+                # print("\n\n")
                 if (k % vert_comp_factor == 0):
                     pp = np.divide(pp, vert_comp_factor)
-                    py.append(pp)
+                    py.append(np.array(pp)) # Append as array.
                     pp = np.zeros(X_DIM)
                 xptr += 1
-            pt.append(py)
+            # print(py[:10])
+            # print("\n\n")
+            pt.append(np.array(py)) # Append as array.
             py = [] # Reset py.
             yptr += 1
             xptr = 0
         pp = np.zeros(X_DIM) # Reset after each inner loop.
-        pT.append(pt)
+        pT.append(np.array(pt)) # Append as array.
+        yptr = 0
+        # print(pt[:10])
+        # print("\n\n")
         pt = [] # Reset pt.
 
     # Now we need to convert the classes to a numerical (enumerated) representation.
@@ -132,25 +165,25 @@ def format_sequences(df, count):
         this_class = classes[i].split('_')[1]
         # Can replace this with a better structure if needed, for 3 classes this should be sufficient for now.
         if this_class == "jump":
-            class_nums.append(ClassNames.JUMPING)
+            class_nums.append(ClassNames.JUMPING.value)
         elif this_class == "jumps":
-            class_nums.append(ClassNames.JUMPING)
+            class_nums.append(ClassNames.JUMPING.value)
         elif this_class == "walk":
-            class_nums.append(ClassNames.WALKING)
+            class_nums.append(ClassNames.WALKING.value)
         elif this_class == "clap":
-            class_nums.append(ClassNames.CLAPPING)
+            class_nums.append(ClassNames.CLAPPING.value)
 
     # At the end of this code execution, pt will contain lists of lists, representing the 2D images.
     # Class nums contains a numerical representation of the classes, which can be used for training purposes.
     print('\n')
     print(len(pT), len(class_nums))
-    return pT, class_nums
+    return np.array(pT), np.array(class_nums)
 
 # Format the data from csv.
 X, y = format_sequences(df, activity_count)
 print("Formatting finished")
-print(X)
-print(y)
+# print(X)
+# print(y)
 
 # Using a generative model, the input size should be reduced to the number of frames that will be used for classification purposes.
 
@@ -159,44 +192,56 @@ print(y)
 
 # Create an array to hold all the selected frames for each activity. Activity lengths can be arbitrary here, they should be uniformly scaled down to the correct size.
 all_select_frames = []
-for j in range(len(X)):
+for j in range(activity_count):
     # Create an array containing the average pixel value for each frame.
     averages = []
-    this_activity = X.iloc[j]
+    this_activity = X[j]
+    #print(this_activity)
     for k in range(len(this_activity)):
-        this_frame = this_activity.iloc[k]
+        this_frame = this_activity[k]
         this_avg = np.average(this_frame) # Get the average pixel value for this frame.
+        #print(this_avg)
         averages.append(this_avg)
     max_frames = []
     select_frames = []
+    #print(averages)
     # We want half of the target frames to be peak values, hence divide by 2.
-    for n in range(INTERPOLATION_FRAMES / 2):
-        section_size = np.floor(len(averages) / (INTERPOLATION_FRAMES / 2))
-        current_max_index = averages.index(max(averages.iloc[n * section_size : (n + 1) * section_size]))
+    for n in range(round(INTERPOLATION_FRAMES / 2)):
+        section_size = round(np.floor(len(averages) / (INTERPOLATION_FRAMES / 2)))
+        current_max_index = averages.index(max(averages[n * section_size : (n + 1) * section_size]))
         max_frames.append(current_max_index)
     # After the below loop, we should end up with TARGET_FRAMES number of frames in select_frames
-    for n in range(INTERPOLATION_FRAMES / 2 - 1):
-        current_max_index = max_frames.iloc[n]
-        current_min_index = round(max_frames.iloc[n] + max_frames.iloc[n + 1]) / 2
+    for n in range(round(INTERPOLATION_FRAMES / 2) - 1):
+        current_max_index = max_frames[n]
+        current_min_index = round((max_frames[n] + max_frames[n + 1]) / 2)
         # Attach the next pair of min/max frames.
         select_frames.append(current_max_index)
+        #print(current_max_index)
         select_frames.append(current_min_index)
+        #print(current_min_index)
     all_select_frames.append(select_frames)
 
-# all_select_frames now contains all of the reduced format activity data INDICES, this can used in conjunction with the actual data in X, to feed to the classifier for training.
-scaler = MinMaxScaler()
-X = scaler.fit_transform(X) # Normalise the input data.
-print("Fitting finished")
-
 all_frames = []
-for j in all_select_frames:
+for j in range(activity_count):
     this_indices = all_select_frames[j]
     this_frames = []
     for k in range(TARGET_FRAMES):
-        this_frames.append(X[this_indices[k]])
+        this_frames.append(X[j][this_indices[k]])
     all_frames.append(this_frames)
 
 X = all_frames # Re-assign the variable name so we don't have to change the other code later.
+
+# all_select_frames now contains all of the reduced format activity data INDICES, this can used in conjunction with the actual data in X, to feed to the classifier for training.
+scaler = MinMaxScaler()
+# X = np.ravel(X) # 1D array
+# print(X[1])
+# print(X[1])
+# print(X[2])
+X = np.reshape(X, (60, 4000))
+X = scaler.fit_transform(X) # Normalise the input data.
+X = np.reshape(X, (60, 8, 10, 50))
+print("Fitting finished")
+print(X[0])
 
 # Divide the dataset into training, validation and testing sets.
 train_size = int(activity_count * 0.8)
@@ -218,9 +263,121 @@ y_val = make_Tensor(y_val)
 X_test = make_Tensor(X_test)
 y_test = make_Tensor(y_test)
 
-
-
-
 # Match the generated points to an activity class using the classifier.
 
 # After the terminal point has been observed, start a new observation window, this observation window cannot be fed into the generator unless the number of frames is equal to or greater than the minimum.
+class CNNLSTM(nn.Module):
+    def __init__(self, n_features, n_hidden, seq_len, n_layers):
+        super(CNNLSTM, self).__init__()
+        self.n_hidden = n_hidden
+        self.seq_len = seq_len
+        self.n_layers = n_layers
+        # 2D CNN layer.
+        self.c = nn.Conv2d(in_channels = 8, out_channels = 8, kernel_size = 5, stride = 3)
+        self.lstm = nn.LSTM(
+            input_size = n_features,
+            hidden_size = n_hidden,
+            num_layers = n_layers
+        )
+        self.linear = nn.Linear(in_features = n_hidden, out_features = 1)
+
+    # IMPORTANT! This assumes that the sequences input from the csv are of a uniform length - if for some reason they are not, you need to add additional code to make sure that they are the same length.
+    def reset_hidden_state(self):
+        self.hidden = (
+            torch.zeros(1, 1, 4),#self.n_layers, self.seq_len, self.n_hidden),
+            torch.zeros(1, 1, 4)#self.n_layers, self.seq_len, self.n_hidden)
+        )
+
+    def forward(self, seq):
+        seq = self.c(seq)#seq.view(len(seq), 10, 50))
+        lstm_out, self.hidden = self.lstm(
+            seq.view(8, 32),#seq.view(self.seq_len, 32),#len(seq), self.seq_len - 1, -1),
+            # self.hidden
+        )
+        last_time_step = lstm_out.view(self.seq_len, len(seq), self.n_hidden)[-1]
+        y_pred = self.linear(last_time_step)
+        return y_pred
+
+def train_model(model, train_data, train_labels, val_data = None, val_labels = None, num_epochs = 100, verbose = 10, patience = 10):
+    loss_fn = torch.nn.L1Loss() # L1 loss by default.
+    optimiser = torch.optim.Adam(model.parameters(), lr = 0.001) # Default learning rate is 0.001.
+    # Histograms used to monitor training progress.
+    train_hist = []
+    val_hist = []
+
+    for t in range(num_epochs):
+        epoch_loss = 0
+
+        for idx, seq in enumerate(train_data):
+
+            # After every sample, we need to reset the hidden state.
+            model.reset_hidden_state()
+
+            seq = torch.unsqueeze(seq, 0)
+            # seq = seq[0] # Remove the first dimension.
+            # seq.reshape(100, 10, 50)
+            # print(seq.size())
+            y_pred = model(seq)
+            loss = loss_fn(y_pred[0].float(), train_labels[idx]) # Calculate the loss after 1 step, then update the weights.
+
+            optimiser.zero_grad()
+            loss.backward()
+            optimiser.step()
+
+            epoch_loss += loss.item()
+
+        train_hist.append(epoch_loss / len(train_data))
+
+        if val_data is not None:
+
+            with torch.no_grad():
+
+                val_loss = 0
+
+                for val_idx, val_seq in enumerate(val_data):
+
+                    model.reset_hidden_state() # Reset the hidden state with every sequence.
+
+                    val_seq = torch.unsqueeze(val_seq, 0)
+                    y_val_pred = model(val_seq)
+                    val_step_loss = loss_fn(y_val_pred[0].float(), val_labels[val_idx])
+
+                    val_loss += val_step_loss
+
+            val_hist.append(val_loss / len(val_data))
+
+            # Print the loss based on verbose value (pseudo-verbose).
+            if t % verbose == 0:
+                print(f'Epoch {t} train loss: {epoch_loss / len(train_data)} val loss: {val_loss / len(val_data)}')
+
+            # Can add early stopping if wanted, not using currently.
+
+    return model, train_hist, val_hist
+
+seq_length = 8 # This needs to be tailored - based on the number of frames in a captured sequence of activity data.
+
+model = CNNLSTM(
+    n_features = 32,
+    n_hidden = 4,
+    seq_len = seq_length,
+    n_layers = 1
+)
+
+model, train_hist, val_hist = train_model(
+    model, 
+    X_train,
+    y_train,
+    X_val,
+    y_val,
+    num_epochs = 100,
+    verbose = 10,
+    patience = 50
+)
+
+plt.figure(figsize = (14, 10)) # Attempt to set the figure size using an alternative method.
+plt.plot(train_hist, label = "Training loss")
+plt.plot(val_hist, label = "Val loss")
+plt.legend()
+
+
+
