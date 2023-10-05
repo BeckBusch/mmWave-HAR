@@ -114,25 +114,36 @@ def format_sequences(df, count):
         this_activity = this_activity.iloc[1:] # Remove the class before formatting the rest of the data.
         this_activity = this_activity.iloc[:500000]
         print(i)
+        # print(this_activity[:20])
+        # print("\n\n")
         #print(this_activity)
         # This will continue for the required number of frame iterations.
         for j in range(round(len(this_activity) / XY_DIM)):
             for k in range(Y_DIM):
-                px = this_activity.iloc[xptr * X_DIM + yptr * XY_DIM : (xptr + 1) * X_DIM + yptr * XY_DIM]
+                px = this_activity.iloc[xptr * X_DIM + yptr * XY_DIM : (xptr + 1) * X_DIM + yptr * XY_DIM].to_numpy()
+                # If there are zeros where there shouldn't be, the below code handles this so it doesn't break everything.
+                # print(px[:10])
+                # print(pp[:10])
                 if (len(px) != X_DIM) :
                     px = np.zeros(X_DIM)
                 pp = np.add(pp, px)
+                # print(pp[:10])
+                # print("\n\n")
                 if (k % vert_comp_factor == 0):
                     pp = np.divide(pp, vert_comp_factor)
-                    py.append(pp)
+                    py.append(np.array(pp)) # Append as array.
                     pp = np.zeros(X_DIM)
                 xptr += 1
-            pt.append(py)
+            # print(py[:10])
+            # print("\n\n")
+            pt.append(np.array(py)) # Append as array.
             py = [] # Reset py.
             yptr += 1
             xptr = 0
         pp = np.zeros(X_DIM) # Reset after each inner loop.
-        pT.append(pt)
+        pT.append(np.array(pt)) # Append as array.
+        # print(pt[:10])
+        # print("\n\n")
         pt = [] # Reset pt.
 
     # Now we need to convert the classes to a numerical (enumerated) representation.
@@ -140,19 +151,19 @@ def format_sequences(df, count):
         this_class = classes[i].split('_')[1]
         # Can replace this with a better structure if needed, for 3 classes this should be sufficient for now.
         if this_class == "jump":
-            class_nums.append(ClassNames.JUMPING)
+            class_nums.append(ClassNames.JUMPING.value)
         elif this_class == "jumps":
-            class_nums.append(ClassNames.JUMPING)
+            class_nums.append(ClassNames.JUMPING.value)
         elif this_class == "walk":
-            class_nums.append(ClassNames.WALKING)
+            class_nums.append(ClassNames.WALKING.value)
         elif this_class == "clap":
-            class_nums.append(ClassNames.CLAPPING)
+            class_nums.append(ClassNames.CLAPPING.value)
 
     # At the end of this code execution, pt will contain lists of lists, representing the 2D images.
     # Class nums contains a numerical representation of the classes, which can be used for training purposes.
     print('\n')
     print(len(pT), len(class_nums))
-    return pT, class_nums
+    return pT, np.array(class_nums)
 
 # Format the data from csv.
 X, y = format_sequences(df, activity_count)
@@ -162,6 +173,13 @@ print("Formatting finished")
 
 print(np.shape(X))
 
+# print(X[0])
+# print("\n\n")
+# print(X[1])
+# print("\n\n")
+# print(X[2])
+# print("\n\n")
+
 time.sleep(10)
 
 scaler = MinMaxScaler()
@@ -169,10 +187,11 @@ scaler = MinMaxScaler()
 # print(X[1])
 # print(X[1])
 # print(X[2])
-X = np.reshape(X, (60, 1000))
+X = np.reshape(X, (60, 50000))
 X = scaler.fit_transform(X) # Normalise the input data.
+X = np.reshape(X, (60, 100, 10, 50))
 print("Fitting finished")
-print(X)
+print(X[0])
 time.sleep(1)
 
 # Divide the dataset into training, validation and testing sets.
@@ -202,7 +221,7 @@ class CNNLSTM(nn.Module):
         self.seq_len = seq_len
         self.n_layers = n_layers
         # 2D CNN layer.
-        self.c = nn.Conv2d(in_channels = 1, out_channels = 1, kernel_size = 5, stride = 3)
+        self.c = nn.Conv2d(in_channels = 100, out_channels = 100, kernel_size = 5, stride = 3)
         self.lstm = nn.LSTM(
             input_size = n_features,
             hidden_size = n_hidden,
@@ -213,17 +232,17 @@ class CNNLSTM(nn.Module):
     # IMPORTANT! This assumes that the sequences input from the csv are of a uniform length - if for some reason they are not, you need to add additional code to make sure that they are the same length.
     def reset_hidden_state(self):
         self.hidden = (
-            torch.zeros(self.n_layers, self.seq_len - 1, self.n_hidden),
-            torch.zeros(self.n_layers, self.seq_len - 1, self.n_hidden)
+            torch.zeros(1, 1, 4),#self.n_layers, self.seq_len, self.n_hidden),
+            torch.zeros(1, 1, 4)#self.n_layers, self.seq_len, self.n_hidden)
         )
 
     def forward(self, seq):
-        seq = self.c(seq.view(len(seq), 1, -1))
+        seq = self.c(seq)#seq.view(len(seq), 10, 50))
         lstm_out, self.hidden = self.lstm(
-            seq.view(len(seq), self.seq_len - 1, -1),
-            self.hidden
+            seq.view(100, 32),#seq.view(self.seq_len, 32),#len(seq), self.seq_len - 1, -1),
+            # self.hidden
         )
-        last_time_step = lstm_out.view(self.seq_len - 1, len(seq), self.n_hidden)[-1]
+        last_time_step = lstm_out.view(self.seq_len, len(seq), self.n_hidden)[-1]
         y_pred = self.linear(last_time_step)
         return y_pred
 
@@ -243,6 +262,9 @@ def train_model(model, train_data, train_labels, val_data = None, val_labels = N
             model.reset_hidden_state()
 
             seq = torch.unsqueeze(seq, 0)
+            # seq = seq[0] # Remove the first dimension.
+            # seq.reshape(100, 10, 50)
+            # print(seq.size())
             y_pred = model(seq)
             loss = loss_fn(y_pred[0].float(), train_labels[idx]) # Calculate the loss after 1 step, then update the weights.
 
@@ -280,10 +302,10 @@ def train_model(model, train_data, train_labels, val_data = None, val_labels = N
 
     return model, train_hist, val_hist
 
-seq_length = 500 # This needs to be tailored - based on the number of frames in a captured sequence of activity data.
+seq_length = 100 # This needs to be tailored - based on the number of frames in a captured sequence of activity data.
 
 model = CNNLSTM(
-    n_features = 1,
+    n_features = 32,
     n_hidden = 4,
     seq_len = seq_length,
     n_layers = 1
