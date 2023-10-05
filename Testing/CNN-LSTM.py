@@ -81,19 +81,22 @@ print("Activity data has been read in")
 print(f"Activity count is {activity_count}\n")
 
 # Image dimensions are based on the radar configuration, these need to be set and changed inside of this file accordingly.
-X_DIM = 50 # For example.
-Y_DIM = 100 # For example.
+X_DIM = 143 # For example.
+Y_DIM = 35 # For example.
 XY_DIM = X_DIM * Y_DIM
 
+VERT_COMP_FACTOR = 5 # Vertical compression factor (y values) -> 7 pixels.
+HORIZ_COMP_FACTOR = 13 # Horizontal compression factor (x values) -> 11 pixels.
+
 def format_sequences(df, count):
-    px = [] # This list will contain a row of pixels for a single frame.
+    pxt = [] # Temporary list for x axis pixels.
+    px = np.empty(round(X_DIM / HORIZ_COMP_FACTOR)) # This list will contain a row of pixels for a single frame.
     py = [] # This list will contain a set of pixel rows for a single frame (one frame).
     pt = [] # This list will contain the sequence of frames.
 
     pT = [] # This list will contain everything (one item per class label).
 
-    pp = np.zeros(X_DIM) # This is a compression array, used for storing compressed pixel values.
-    vert_comp_factor = 10 # Vertical compression factor (y values).
+    pp = np.zeros(round(X_DIM / HORIZ_COMP_FACTOR)) # This is a compression array, used for storing compressed pixel values.
 
     classes = [] # This list will contain the classes for each of the activity sequences.
     class_nums = [] # This list contains the enumerated classes.
@@ -112,7 +115,6 @@ def format_sequences(df, count):
         #print(this_activity.iloc[0])
         classes.append(this_activity.iloc[0]) # Append the class.
         this_activity = this_activity.iloc[1:] # Remove the class before formatting the rest of the data.
-        this_activity = this_activity.iloc[:500000]
         print(i)
         # print(this_activity[:20])
         # print("\n\n")
@@ -120,19 +122,21 @@ def format_sequences(df, count):
         # This will continue for the required number of frame iterations.
         for j in range(round(len(this_activity) / XY_DIM)):
             for k in range(Y_DIM):
-                px = this_activity.iloc[xptr * X_DIM + yptr * XY_DIM : (xptr + 1) * X_DIM + yptr * XY_DIM].to_numpy()
+                pxt = this_activity.iloc[xptr * X_DIM + yptr * XY_DIM : (xptr + 1) * X_DIM + yptr * XY_DIM].to_numpy()
                 # If there are zeros where there shouldn't be, the below code handles this so it doesn't break everything.
                 # print(px[:10])
                 # print(pp[:10])
-                if (len(px) != X_DIM) :
-                    px = np.zeros(X_DIM)
+                if (len(pxt) != X_DIM) :
+                    pxt = np.zeros(X_DIM)
+                for m in range(round(X_DIM / HORIZ_COMP_FACTOR)):
+                    px[m] = np.average(pxt[m * HORIZ_COMP_FACTOR : (m + 1) * HORIZ_COMP_FACTOR])
                 pp = np.add(pp, px)
                 # print(pp[:10])
                 # print("\n\n")
-                if (k % vert_comp_factor == 0):
-                    pp = np.divide(pp, vert_comp_factor)
+                if (k % VERT_COMP_FACTOR == 0):
+                    pp = np.divide(pp, VERT_COMP_FACTOR)
                     py.append(np.array(pp)) # Append as array.
-                    pp = np.zeros(X_DIM)
+                    pp = np.zeros(round(X_DIM / HORIZ_COMP_FACTOR))
                 xptr += 1
             # print(py[:10])
             # print("\n\n")
@@ -140,8 +144,9 @@ def format_sequences(df, count):
             py = [] # Reset py.
             yptr += 1
             xptr = 0
-        pp = np.zeros(X_DIM) # Reset after each inner loop.
+        pp = np.zeros(round(X_DIM / HORIZ_COMP_FACTOR)) # Reset after each inner loop.
         pT.append(np.array(pt)) # Append as array.
+        yptr = 0
         # print(pt[:10])
         # print("\n\n")
         pt = [] # Reset pt.
@@ -163,7 +168,7 @@ def format_sequences(df, count):
     # Class nums contains a numerical representation of the classes, which can be used for training purposes.
     print('\n')
     print(len(pT), len(class_nums))
-    return pT, np.array(class_nums)
+    return np.array(pT), np.array(class_nums)
 
 # Format the data from csv.
 X, y = format_sequences(df, activity_count)
@@ -187,11 +192,11 @@ scaler = MinMaxScaler()
 # print(X[1])
 # print(X[1])
 # print(X[2])
-X = np.reshape(X, (60, 50000))
+X = np.reshape(X, (60, 7700))
 X = scaler.fit_transform(X) # Normalise the input data.
-X = np.reshape(X, (60, 100, 10, 50))
+X = np.reshape(X, (60, 100, 11, 7))
 print("Fitting finished")
-print(X[0])
+# print(X[0])
 time.sleep(1)
 
 # Divide the dataset into training, validation and testing sets.
@@ -221,7 +226,7 @@ class CNNLSTM(nn.Module):
         self.seq_len = seq_len
         self.n_layers = n_layers
         # 2D CNN layer.
-        self.c = nn.Conv2d(in_channels = 100, out_channels = 100, kernel_size = 5, stride = 3)
+        self.c = nn.Conv2d(in_channels = 100, out_channels = 100, kernel_size = 3, stride = 2)
         self.lstm = nn.LSTM(
             input_size = n_features,
             hidden_size = n_hidden,
@@ -239,7 +244,7 @@ class CNNLSTM(nn.Module):
     def forward(self, seq):
         seq = self.c(seq)#seq.view(len(seq), 10, 50))
         lstm_out, self.hidden = self.lstm(
-            seq.view(100, 32),#seq.view(self.seq_len, 32),#len(seq), self.seq_len - 1, -1),
+            seq.view(100, -1),#seq.view(self.seq_len, 32),#len(seq), self.seq_len - 1, -1),
             # self.hidden
         )
         last_time_step = lstm_out.view(self.seq_len, len(seq), self.n_hidden)[-1]
@@ -305,7 +310,7 @@ def train_model(model, train_data, train_labels, val_data = None, val_labels = N
 seq_length = 100 # This needs to be tailored - based on the number of frames in a captured sequence of activity data.
 
 model = CNNLSTM(
-    n_features = 32,
+    n_features = 15,
     n_hidden = 4,
     seq_len = seq_length,
     n_layers = 1
