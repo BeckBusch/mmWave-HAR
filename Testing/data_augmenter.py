@@ -35,6 +35,6 @@ for p in range(activity_count):
             end_ptr = round(FRAMES_PER_SECOND * duration + start_ptr) # Pointer to the ending frame.
             new_sample = this_sample[start_ptr : end_ptr]
             # Append the array containing the newly generated sample to the csv file.
-            df = pd.DataFrame(new_sample).to_csv("augmented_data.csv")
+            pd.DataFrame(new_sample).to_csv("augmented_data.csv")
 
 # Once we have done this for every data sample and written to the output csv, we are done.
