@@ -74,6 +74,7 @@ def format_sequences(df, count):
         pt = pt.flatten('C') # Flatten in row-major order.
         pt = list(pt)
         pt.insert(0, this_class) # Put the class name back.
+        # np.insert(pt, 0, this_class)
 
         pT.append(pt)
         yptr = 0
