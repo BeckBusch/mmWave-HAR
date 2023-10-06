@@ -77,12 +77,13 @@ for CurrentFileNumber=1:fileCount
         radarClip = resp(1:rangeLimit,lowerAngleLimit:upperAngleLimit);
         radarClip = round(radarClip, 3);
 
-        %{
+        
         imagesc(ang_grid(lowerAngleLimit:upperAngleLimit),rng_grid(1:rangeLimit),abs(resp));
         xlabel('Angle');
         ylabel('Range (m)');
         title('Range-Angle Map');
-        %}
+        pause
+        
 
         radarClip = reshape(radarClip.', 1, []).';
         finalExport(CurrentFileNumber, currentFrameNumber+1) = mat2cell(radarClip, 5005);
