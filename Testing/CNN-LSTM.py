@@ -40,25 +40,23 @@ print(f"Path being used is: {path}")
 
 # Read in the activity data, create a dataframe for it with the rows and columns transposed for optimisation.
 activity_data = open(path).readlines()
-del activity_data[0]
 
 # Total number of activities recorded.
 activity_count = len(activity_data)
 
-df = pd.DataFrame()
+all_data = []
 
 for i in range(activity_count):
     temp = activity_data[i].split(',')
     temp[-1] = temp[-1].split('\n')[0] # Remove the newline character at the end.
     activity_name = temp[0] 
     temp = temp[1:] # Remove the activity name (it is a string, not complex dtype, so separate it).
-    cmplx = []
-    for s in temp:
-        s = s.replace('i', 'j')
-        v = abs(complex(s)) # Use the modulus of the complex number, else stuff gets wacky (type errors).
-        cmplx.append(v)
-    cmplx.insert(0, activity_name)
-    df[i] = cmplx
+    # cmplx = []
+    # for s in temp:
+    #     cmplx.append(s)
+    temp.insert(0, activity_name)
+    # print(temp)
+    all_data.append(temp)
 
 # Print as a test.
 print(df[0])
