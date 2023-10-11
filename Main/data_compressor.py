@@ -16,7 +16,7 @@ XY_DIM = X_DIM * Y_DIM
 VERT_COMP_FACTOR = 5 # Vertical compression factor (y values) -> 7 pixels.
 HORIZ_COMP_FACTOR = 13 # Horizontal compression factor (x values) -> 11 pixels.
 
-def format_sequences(df, count):
+def format_sequences(df, count, p_index):
     px_t = [] # Temporary list for x axis pixels.
     px = np.empty(round(X_DIM / HORIZ_COMP_FACTOR)) # This list will contain a row of pixels for a single frame.
     py = [] # This list will contain a set of pixel rows for a single frame (one frame).
@@ -83,11 +83,17 @@ def format_sequences(df, count):
         pt = [] # Reset pt.
 
         # pd.DataFrame(pt).to_csv("reduced_data.csv") # Append to reduced data csv.
-
-    with open('reduced_data.csv', 'w', newline='') as file:
-    # Step 4: Using csv.writer to write the list to the CSV file
-        writer = csv.writer(file)
-        writer.writerows(pT) # Use writerow for single list
+    
+    if p_index == 0:
+        with open('reduced_data.csv', 'w', newline='') as file:
+        # Step 4: Using csv.writer to write the list to the CSV file
+            writer = csv.writer(file)
+            writer.writerows(pT) # Use writerow for single list
+    else:
+        with open('reduced_data.csv', 'a', newline='') as file:
+        # Step 4: Using csv.writer to write the list to the CSV file
+            writer = csv.writer(file)
+            writer.writerows(pT) # Use writerow for single list
 
 path_list = [] # Path to the csv file with all of the activity data (change this to get different activity data if individual files are too big).
 path_list.append('C:\\Data\\output.csv')
@@ -137,4 +143,8 @@ for path in path_list:
     print(f"Activity count is {activity_count}\n")
 
     print(f"Path being used is: {path}")
-    format_sequences(df, activity_count) # Actually call the function.
+
+    # Get index of the current path
+    p_index = path_list.index(path)
+
+    format_sequences(df, activity_count, p_index) # Actually call the function.
