@@ -36,6 +36,7 @@ class ClassNames(Enum):
     JUMPING = 0
     WALKING = 1
     CLAPPING = 2
+    BLANK = 3
 
 # Matplotlib additional arguments (jupyter notebook only).
 # %matplotlib inline
@@ -59,6 +60,7 @@ del activity_data[0]
 activity_count = len(activity_data)
 
 all_data = []
+
 for i in range(activity_count):
     temp = activity_data[i].split(',')
     temp[-1] = temp[-1].split('\n')[0] # Remove the newline character at the end.
@@ -89,61 +91,48 @@ print("Activity data has been read in")
 print(f"Activity count is {activity_count}\n")
 
 # Image dimensions are based on the radar configuration, these need to be set and changed inside of this file accordingly.
-X_DIM = 143 # For example.
-Y_DIM = 35 # For example.
+X_DIM = 11 # For example.
+Y_DIM = 7 # For example.
 XY_DIM = X_DIM * Y_DIM
 
-VERT_COMP_FACTOR = 5 # Vertical compression factor (y values) -> 7 pixels.
-HORIZ_COMP_FACTOR = 13 # Horizontal compression factor (x values) -> 11 pixels.
-
 def format_sequences(df, count):
-    px = [] # This list will contain a row of pixels for a single frame.
+    px = np.empty(X_DIM) # This list will contain a row of pixels for a single frame.
     py = [] # This list will contain a set of pixel rows for a single frame (one frame).
     pt = [] # This list will contain the sequence of frames.
 
     pT = [] # This list will contain everything (one item per class label).
-
-    pp = np.zeros(X_DIM) # This is a compression array, used for storing compressed pixel values.
-    vert_comp_factor = 10 # Vertical compression factor (y values).
 
     classes = [] # This list will contain the classes for each of the activity sequences.
     class_nums = [] # This list contains the enumerated classes.
 
     xptr = 0 # Pointer for the end of the most recent row.
     yptr = 0 # Pointer for the end of the most recent frame.
-
-    df = df.T # Transpose the data frame.
     #print(df[0])
     #print(df[1])
 
     # We need to start at 1 because the first values are not reliable.
     for i in range(count):
-        this_activity = df.iloc[i] # Get the next activity.
+        this_activity = df[i] # Get the next activity.
         #print(this_activity)
         #print(this_activity.iloc[0])
-        classes.append(this_activity.iloc[0]) # Append the class.
-        this_activity = this_activity.iloc[1:] # Remove the class before formatting the rest of the data.
-        this_activity = this_activity.iloc[:500000]
-        # # print(i)
-        # print(this_activity[:20])
-        # print("\n\n")
-        #print(this_activity)
+        classes.append(this_activity[0]) # Append the class.
+        this_activity = this_activity[1:] # Remove the class before formatting the rest of the data.
+        # Convert to float otherwise its just a string
+        temp = []
+        for j in range(len(this_activity)):
+            temp.append(float(this_activity[j]))
+        this_activity = temp
+
         # This will continue for the required number of frame iterations.
         for j in range(round(len(this_activity) / XY_DIM)):
             for k in range(Y_DIM):
-                px = this_activity.iloc[xptr * X_DIM + yptr * XY_DIM : (xptr + 1) * X_DIM + yptr * XY_DIM].to_numpy()
+                px = np.array(this_activity[xptr * X_DIM + yptr * XY_DIM : (xptr + 1) * X_DIM + yptr * XY_DIM])
                 # If there are zeros where there shouldn't be, the below code handles this so it doesn't break everything.
                 # print(px[:10])
                 # print(pp[:10])
-                if (len(px) != X_DIM) :
-                    px = np.zeros(X_DIM)
-                pp = np.add(pp, px)
+                py.append(np.array(px)) # Append as array.
                 # print(pp[:10])
                 # print("\n\n")
-                if (k % vert_comp_factor == 0):
-                    pp = np.divide(pp, vert_comp_factor)
-                    py.append(np.array(pp)) # Append as array.
-                    pp = np.zeros(X_DIM)
                 xptr += 1
             # print(py[:10])
             # print("\n\n")
@@ -151,7 +140,6 @@ def format_sequences(df, count):
             py = [] # Reset py.
             yptr += 1
             xptr = 0
-        pp = np.zeros(X_DIM) # Reset after each inner loop.
         pT.append(np.array(pt)) # Append as array.
         yptr = 0
         # print(pt[:10])
@@ -160,7 +148,7 @@ def format_sequences(df, count):
 
     # Now we need to convert the classes to a numerical (enumerated) representation.
     for i in range(len(classes)):
-        this_class = classes[i].split('_')[1]
+        this_class = classes[i].split('_')[0] # MAKE SURE TO CHANGE IF NECESSARY
         # Can replace this with a better structure if needed, for 3 classes this should be sufficient for now.
         if this_class == "jump":
             class_nums.append(ClassNames.JUMPING.value)
@@ -170,6 +158,8 @@ def format_sequences(df, count):
             class_nums.append(ClassNames.WALKING.value)
         elif this_class == "clap":
             class_nums.append(ClassNames.CLAPPING.value)
+        elif this_class == "blank":
+            class_nums.append(ClassNames.BLANK.value)
 
     # At the end of this code execution, pt will contain lists of lists, representing the 2D images.
     # Class nums contains a numerical representation of the classes, which can be used for training purposes.
@@ -178,10 +168,12 @@ def format_sequences(df, count):
     return np.array(pT), np.array(class_nums)
 
 # Format the data from csv.
-X, y = format_sequences(df, activity_count)
+X, y = format_sequences(all_data, activity_count)
 print("Formatting finished")
-# print(X)
-# print(y)
+#print(X)
+#print(y)
+
+print(np.shape(X))
 
 # Using a generative model, the input size should be reduced to the number of frames that will be used for classification purposes.
 
@@ -235,11 +227,11 @@ scaler = MinMaxScaler()
 # print(X[1])
 # print(X[1])
 # print(X[2])
-X = np.reshape(X, (60, 4000))
+X = np.reshape(X, (884, 616))
 X = scaler.fit_transform(X) # Normalise the input data.
-X = np.reshape(X, (60, 8, 10, 50))
+X = np.reshape(X, (884, 8, 7, 11))
 print("Fitting finished")
-print(X[0])
+# print(X[0])
 
 # Divide the dataset into training, validation and testing sets.
 train_size = int(activity_count * 0.8)
@@ -261,9 +253,6 @@ y_val = make_Tensor(y_val)
 X_test = make_Tensor(X_test)
 y_test = make_Tensor(y_test)
 
-# Match the generated points to an activity class using the classifier.
-
-# After the terminal point has been observed, start a new observation window, this observation window cannot be fed into the generator unless the number of frames is equal to or greater than the minimum.
 class CNNLSTM(nn.Module):
     def __init__(self, n_features, n_hidden, seq_len, n_layers):
         super(CNNLSTM, self).__init__()
@@ -271,7 +260,7 @@ class CNNLSTM(nn.Module):
         self.seq_len = seq_len
         self.n_layers = n_layers
         # 2D CNN layer.
-        self.c = nn.Conv2d(in_channels = 8, out_channels = 8, kernel_size = 5, stride = 3)
+        self.c = nn.Conv2d(in_channels = 8, out_channels = 8, kernel_size = 3, stride = 2)
         self.lstm = nn.LSTM(
             input_size = n_features,
             hidden_size = n_hidden,
@@ -289,7 +278,7 @@ class CNNLSTM(nn.Module):
     def forward(self, seq):
         seq = self.c(seq)#seq.view(len(seq), 10, 50))
         lstm_out, self.hidden = self.lstm(
-            seq.view(8, 32),#seq.view(self.seq_len, 32),#len(seq), self.seq_len - 1, -1),
+            seq.view(8, -1),#seq.view(self.seq_len, 32),#len(seq), self.seq_len - 1, -1),
             # self.hidden
         )
         last_time_step = lstm_out.view(self.seq_len, len(seq), self.n_hidden)[-1]
@@ -355,7 +344,7 @@ def train_model(model, train_data, train_labels, val_data = None, val_labels = N
 seq_length = 8 # This needs to be tailored - based on the number of frames in a captured sequence of activity data.
 
 model = CNNLSTM(
-    n_features = 32,
+    n_features = 15,
     n_hidden = 4,
     seq_len = seq_length,
     n_layers = 1
@@ -376,6 +365,4 @@ plt.figure(figsize = (14, 10)) # Attempt to set the figure size using an alterna
 plt.plot(train_hist, label = "Training loss")
 plt.plot(val_hist, label = "Val loss")
 plt.legend()
-
-
 

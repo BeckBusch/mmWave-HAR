@@ -16,13 +16,13 @@ from pandas.plotting import register_matplotlib_converters
 from torch import nn, optim
 from enum import Enum
 import csv
-import time
 
 # Class names will change based on the information being fed to the network; this is just an example.
 class ClassNames(Enum):
     JUMPING = 0
     WALKING = 1
     CLAPPING = 2
+    BLANK = 3
 
 # Matplotlib additional arguments (jupyter notebook only).
 # %matplotlib inline
@@ -35,7 +35,7 @@ RANDOM_SEED = 33
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
 
-path = 'C:\\Data\\output.csv' # Path to the csv file with all of the activity data.
+path = 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\reduced_data.csv' # Path to the csv file with all of the activity data.
 print(f"Path being used is: {path}")
 
 # Read in the activity data, create a dataframe for it with the rows and columns transposed for optimisation.
@@ -76,62 +76,47 @@ print("Activity data has been read in")
 print(f"Activity count is {activity_count}\n")
 
 # Image dimensions are based on the radar configuration, these need to be set and changed inside of this file accordingly.
-X_DIM = 143 # For example.
-Y_DIM = 35 # For example.
+X_DIM = 11 # For example.
+Y_DIM = 7 # For example.
 XY_DIM = X_DIM * Y_DIM
 
-VERT_COMP_FACTOR = 5 # Vertical compression factor (y values) -> 7 pixels.
-HORIZ_COMP_FACTOR = 13 # Horizontal compression factor (x values) -> 11 pixels.
-
 def format_sequences(df, count):
-    pxt = [] # Temporary list for x axis pixels.
-    px = np.empty(round(X_DIM / HORIZ_COMP_FACTOR)) # This list will contain a row of pixels for a single frame.
+    px = np.empty(X_DIM) # This list will contain a row of pixels for a single frame.
     py = [] # This list will contain a set of pixel rows for a single frame (one frame).
     pt = [] # This list will contain the sequence of frames.
 
     pT = [] # This list will contain everything (one item per class label).
-
-    pp = np.zeros(round(X_DIM / HORIZ_COMP_FACTOR)) # This is a compression array, used for storing compressed pixel values.
 
     classes = [] # This list will contain the classes for each of the activity sequences.
     class_nums = [] # This list contains the enumerated classes.
 
     xptr = 0 # Pointer for the end of the most recent row.
     yptr = 0 # Pointer for the end of the most recent frame.
-
-    df = df.T # Transpose the data frame.
     #print(df[0])
     #print(df[1])
 
     # We need to start at 1 because the first values are not reliable.
     for i in range(count):
-        this_activity = df.iloc[i] # Get the next activity.
+        this_activity = df[i] # Get the next activity.
         #print(this_activity)
         #print(this_activity.iloc[0])
-        classes.append(this_activity.iloc[0]) # Append the class.
-        this_activity = this_activity.iloc[1:] # Remove the class before formatting the rest of the data.
-        print(i)
-        # print(this_activity[:20])
-        # print("\n\n")
-        #print(this_activity)
+        classes.append(this_activity[0]) # Append the class.
+        this_activity = this_activity[1:] # Remove the class before formatting the rest of the data.
+        # Convert to float otherwise its just a string
+        temp = []
+        for j in range(len(this_activity)):
+            temp.append(float(this_activity[j]))
+        this_activity = temp
         # This will continue for the required number of frame iterations.
         for j in range(round(len(this_activity) / XY_DIM)):
             for k in range(Y_DIM):
-                pxt = this_activity.iloc[xptr * X_DIM + yptr * XY_DIM : (xptr + 1) * X_DIM + yptr * XY_DIM].to_numpy()
+                px = np.array(this_activity[xptr * X_DIM + yptr * XY_DIM : (xptr + 1) * X_DIM + yptr * XY_DIM])
                 # If there are zeros where there shouldn't be, the below code handles this so it doesn't break everything.
                 # print(px[:10])
                 # print(pp[:10])
-                if (len(pxt) != X_DIM) :
-                    pxt = np.zeros(X_DIM)
-                for m in range(round(X_DIM / HORIZ_COMP_FACTOR)):
-                    px[m] = np.average(pxt[m * HORIZ_COMP_FACTOR : (m + 1) * HORIZ_COMP_FACTOR])
-                pp = np.add(pp, px)
+                py.append(np.array(px)) # Append as array.
                 # print(pp[:10])
                 # print("\n\n")
-                if (k % VERT_COMP_FACTOR == 0):
-                    pp = np.divide(pp, VERT_COMP_FACTOR)
-                    py.append(np.array(pp)) # Append as array.
-                    pp = np.zeros(round(X_DIM / HORIZ_COMP_FACTOR))
                 xptr += 1
             # print(py[:10])
             # print("\n\n")
@@ -139,7 +124,6 @@ def format_sequences(df, count):
             py = [] # Reset py.
             yptr += 1
             xptr = 0
-        pp = np.zeros(round(X_DIM / HORIZ_COMP_FACTOR)) # Reset after each inner loop.
         pT.append(np.array(pt)) # Append as array.
         yptr = 0
         # print(pt[:10])
@@ -148,7 +132,7 @@ def format_sequences(df, count):
 
     # Now we need to convert the classes to a numerical (enumerated) representation.
     for i in range(len(classes)):
-        this_class = classes[i].split('_')[1]
+        this_class = classes[i].split('_')[0] # MAKE SURE TO CHANGE IF NECESSARY
         # Can replace this with a better structure if needed, for 3 classes this should be sufficient for now.
         if this_class == "jump":
             class_nums.append(ClassNames.JUMPING.value)
@@ -158,6 +142,8 @@ def format_sequences(df, count):
             class_nums.append(ClassNames.WALKING.value)
         elif this_class == "clap":
             class_nums.append(ClassNames.CLAPPING.value)
+        elif this_class == "blank":
+            class_nums.append(ClassNames.BLANK.value)
 
     # At the end of this code execution, pt will contain lists of lists, representing the 2D images.
     # Class nums contains a numerical representation of the classes, which can be used for training purposes.
@@ -166,7 +152,7 @@ def format_sequences(df, count):
     return np.array(pT), np.array(class_nums)
 
 # Format the data from csv.
-X, y = format_sequences(df, activity_count)
+X, y = format_sequences(all_data, activity_count)
 print("Formatting finished")
 #print(X)
 #print(y)
@@ -180,19 +166,16 @@ print(np.shape(X))
 # print(X[2])
 # print("\n\n")
 
-time.sleep(10)
-
 scaler = MinMaxScaler()
 # X = np.ravel(X) # 1D array
 # print(X[1])
 # print(X[1])
 # print(X[2])
-X = np.reshape(X, (60, 7700))
+X = np.reshape(X, (60, 11550))
 X = scaler.fit_transform(X) # Normalise the input data.
-X = np.reshape(X, (60, 100, 11, 7))
+X = np.reshape(X, (60, 150, 7, 11))
 print("Fitting finished")
 # print(X[0])
-time.sleep(1)
 
 # Divide the dataset into training, validation and testing sets.
 train_size = int(activity_count * 0.8)
@@ -221,7 +204,7 @@ class CNNLSTM(nn.Module):
         self.seq_len = seq_len
         self.n_layers = n_layers
         # 2D CNN layer.
-        self.c = nn.Conv2d(in_channels = 100, out_channels = 100, kernel_size = 3, stride = 2)
+        self.c = nn.Conv2d(in_channels = 150, out_channels = 150, kernel_size = 3, stride = 2)
         self.lstm = nn.LSTM(
             input_size = n_features,
             hidden_size = n_hidden,
@@ -239,7 +222,7 @@ class CNNLSTM(nn.Module):
     def forward(self, seq):
         seq = self.c(seq)#seq.view(len(seq), 10, 50))
         lstm_out, self.hidden = self.lstm(
-            seq.view(100, -1),#seq.view(self.seq_len, 32),#len(seq), self.seq_len - 1, -1),
+            seq.view(150, -1),#seq.view(self.seq_len, 32),#len(seq), self.seq_len - 1, -1),
             # self.hidden
         )
         last_time_step = lstm_out.view(self.seq_len, len(seq), self.n_hidden)[-1]
@@ -302,7 +285,7 @@ def train_model(model, train_data, train_labels, val_data = None, val_labels = N
 
     return model, train_hist, val_hist
 
-seq_length = 100 # This needs to be tailored - based on the number of frames in a captured sequence of activity data.
+seq_length = 150 # This needs to be tailored - based on the number of frames in a captured sequence of activity data.
 
 model = CNNLSTM(
     n_features = 15,
