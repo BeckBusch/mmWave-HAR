@@ -229,6 +229,7 @@ for j in range(activity_count):
 all_frames = []
 for j in range(activity_count):
     this_indices = all_select_frames[j]
+    this_indices = this_indices.sort() # Sort indices in ascending order
     this_frames = []
     for k in range(TARGET_FRAMES):
         this_frames.append(X[j][this_indices[k]])

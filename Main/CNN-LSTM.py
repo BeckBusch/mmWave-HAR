@@ -223,7 +223,7 @@ class CNNLSTM(nn.Module):
         self.seq_len = seq_len
         self.n_layers = n_layers
         # 2D CNN layer.
-        self.c = nn.Conv2d(in_channels = ACTIVITY_FRAMES, out_channels = ACTIVITY_FRAMES, kernel_size = 3, stride = 2)
+        self.c = nn.Conv2d(in_channels = 1, out_channels = 1, kernel_size = 3, stride = 2)
         self.lstm = nn.LSTM(
             input_size = n_features,
             hidden_size = n_hidden,
@@ -239,12 +239,12 @@ class CNNLSTM(nn.Module):
         )
 
     def forward(self, seq):
-        seq = self.c(seq)#seq.view(len(seq), 10, 50))
+        seq = self.c(seq.view(ACTIVITY_FRAMES, 1, Y_DIM, X_DIM))
         lstm_out, self.hidden = self.lstm(
             seq.view(ACTIVITY_FRAMES, -1),#seq.view(self.seq_len, 32),#len(seq), self.seq_len - 1, -1),
             # self.hidden
         )
-        last_time_step = lstm_out.view(self.seq_len, len(seq), self.n_hidden)[-1]
+        last_time_step = lstm_out.view(self.seq_len, self.n_hidden)[-1]
         y_pred = self.linear(last_time_step)
         return y_pred
 
@@ -308,9 +308,9 @@ seq_length = ACTIVITY_FRAMES # This needs to be tailored - based on the number o
 
 model = CNNLSTM(
     n_features = 15,
-    n_hidden = 32,
+    n_hidden = 8,
     seq_len = seq_length,
-    n_layers = 1
+    n_layers = 3
 )
 
 model, train_hist, val_hist = train_model(
