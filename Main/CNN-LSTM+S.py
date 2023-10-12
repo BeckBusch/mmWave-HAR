@@ -33,10 +33,12 @@ STEP_SIZE = 8 # Number of frames to step across.
 
 # Class names will change based on the information being fed to the network; this is just an example.
 class ClassNames(Enum):
-    JUMPING = 0
+    STANDING = 0
     WALKING = 1
     CLAPPING = 2
-    BLANK = 3
+    WAVING = 3
+    JACKS = 4
+    EMPTY = 5
 
 # Matplotlib additional arguments (jupyter notebook only).
 # %matplotlib inline
@@ -54,7 +56,6 @@ print(f"Path being used is: {path}")
 
 # Read in the activity data, create a dataframe for it with the rows and columns transposed for optimisation.
 activity_data = open(path).readlines()
-del activity_data[0]
 
 # Total number of activities recorded.
 activity_count = len(activity_data)
@@ -150,16 +151,30 @@ def format_sequences(df, count):
     for i in range(len(classes)):
         this_class = classes[i].split('_')[0] # MAKE SURE TO CHANGE IF NECESSARY
         # Can replace this with a better structure if needed, for 3 classes this should be sufficient for now.
-        if this_class == "jump":
-            class_nums.append(ClassNames.JUMPING.value)
-        elif this_class == "jumps":
-            class_nums.append(ClassNames.JUMPING.value)
-        elif this_class == "walk":
-            class_nums.append(ClassNames.WALKING.value)
-        elif this_class == "clap":
+        if this_class == "blank":
+            class_nums.append(ClassNames.EMPTY.value)
+        elif this_class == "kevinclapping":
             class_nums.append(ClassNames.CLAPPING.value)
-        elif this_class == "blank":
-            class_nums.append(ClassNames.BLANK.value)
+        elif this_class == "KevinJacks":
+            class_nums.append(ClassNames.JACKS.value)
+        elif this_class == "kevinStanding":
+            class_nums.append(ClassNames.STANDING.value)
+        elif this_class == "kevinWalking":
+            class_nums.append(ClassNames.WALKING.value)
+        elif this_class == "kevinWaving":
+            class_nums.append(ClassNames.WAVING.value)
+        elif this_class == "samClapping":
+            class_nums.append(ClassNames.CLAPPING.value)
+        elif this_class == "SamJacks":
+            class_nums.append(ClassNames.JACKS.value)
+        elif this_class == "samStanding":
+            class_nums.append(ClassNames.STANDING.value)
+        elif this_class == "SamWalking":
+            class_nums.append(ClassNames.WALKING.value)
+        elif this_class == "samWaving":
+            class_nums.append(ClassNames.WAVING.value)
+        elif this_class == "samWalking":
+            class_nums.append(ClassNames.WALKING.value)
 
     # At the end of this code execution, pt will contain lists of lists, representing the 2D images.
     # Class nums contains a numerical representation of the classes, which can be used for training purposes.
@@ -227,9 +242,9 @@ scaler = MinMaxScaler()
 # print(X[1])
 # print(X[1])
 # print(X[2])
-X = np.reshape(X, (884, 616))
+X = np.reshape(X, (activity_count, TARGET_FRAMES * Y_DIM * X_DIM))
 X = scaler.fit_transform(X) # Normalise the input data.
-X = np.reshape(X, (884, 8, 7, 11))
+X = np.reshape(X, (activity_count, TARGET_FRAMES, Y_DIM, X_DIM))
 print("Fitting finished")
 # print(X[0])
 
@@ -260,7 +275,7 @@ class CNNLSTM(nn.Module):
         self.seq_len = seq_len
         self.n_layers = n_layers
         # 2D CNN layer.
-        self.c = nn.Conv2d(in_channels = 8, out_channels = 8, kernel_size = 3, stride = 2)
+        self.c = nn.Conv2d(in_channels = TARGET_FRAMES, out_channels = TARGET_FRAMES, kernel_size = 3, stride = 2)
         self.lstm = nn.LSTM(
             input_size = n_features,
             hidden_size = n_hidden,
@@ -278,7 +293,7 @@ class CNNLSTM(nn.Module):
     def forward(self, seq):
         seq = self.c(seq)#seq.view(len(seq), 10, 50))
         lstm_out, self.hidden = self.lstm(
-            seq.view(8, -1),#seq.view(self.seq_len, 32),#len(seq), self.seq_len - 1, -1),
+            seq.view(TARGET_FRAMES, -1),#seq.view(self.seq_len, 32),#len(seq), self.seq_len - 1, -1),
             # self.hidden
         )
         last_time_step = lstm_out.view(self.seq_len, len(seq), self.n_hidden)[-1]
@@ -341,7 +356,7 @@ def train_model(model, train_data, train_labels, val_data = None, val_labels = N
 
     return model, train_hist, val_hist
 
-seq_length = 8 # This needs to be tailored - based on the number of frames in a captured sequence of activity data.
+seq_length = TARGET_FRAMES # This needs to be tailored - based on the number of frames in a captured sequence of activity data.
 
 model = CNNLSTM(
     n_features = 15,

@@ -19,14 +19,19 @@ import csv
 
 # Class names will change based on the information being fed to the network; this is just an example.
 class ClassNames(Enum):
-    JUMPING = 0
+    STANDING = 0
     WALKING = 1
     CLAPPING = 2
-    BLANK = 3
+    WAVING = 3
+    JACKS = 4
+    EMPTY = 5
 
 # Matplotlib additional arguments (jupyter notebook only).
 # %matplotlib inline
 # %config InlineBackend.figure_format='retina'
+
+SAMPLE_COUNT = 278
+ACTIVITY_FRAMES = 150 # Number of frames for a single activity sample (6s).
 
 sns.set(style='whitegrid', palette='muted', font_scale=1.2)
 # rcParams['figure.figsize'] = 14, 10
@@ -134,16 +139,30 @@ def format_sequences(df, count):
     for i in range(len(classes)):
         this_class = classes[i].split('_')[0] # MAKE SURE TO CHANGE IF NECESSARY
         # Can replace this with a better structure if needed, for 3 classes this should be sufficient for now.
-        if this_class == "jump":
-            class_nums.append(ClassNames.JUMPING.value)
-        elif this_class == "jumps":
-            class_nums.append(ClassNames.JUMPING.value)
-        elif this_class == "walk":
-            class_nums.append(ClassNames.WALKING.value)
-        elif this_class == "clap":
+        if this_class == "blank":
+            class_nums.append(ClassNames.EMPTY.value)
+        elif this_class == "kevinclapping":
             class_nums.append(ClassNames.CLAPPING.value)
-        elif this_class == "blank":
-            class_nums.append(ClassNames.BLANK.value)
+        elif this_class == "KevinJacks":
+            class_nums.append(ClassNames.JACKS.value)
+        elif this_class == "kevinStanding":
+            class_nums.append(ClassNames.STANDING.value)
+        elif this_class == "kevinWalking":
+            class_nums.append(ClassNames.WALKING.value)
+        elif this_class == "kevinWaving":
+            class_nums.append(ClassNames.WAVING.value)
+        elif this_class == "samClapping":
+            class_nums.append(ClassNames.CLAPPING.value)
+        elif this_class == "SamJacks":
+            class_nums.append(ClassNames.JACKS.value)
+        elif this_class == "samStanding":
+            class_nums.append(ClassNames.STANDING.value)
+        elif this_class == "SamWalking":
+            class_nums.append(ClassNames.WALKING.value)
+        elif this_class == "samWaving":
+            class_nums.append(ClassNames.WAVING.value)
+        elif this_class == "samWalking":
+            class_nums.append(ClassNames.WALKING.value)
 
     # At the end of this code execution, pt will contain lists of lists, representing the 2D images.
     # Class nums contains a numerical representation of the classes, which can be used for training purposes.
@@ -171,9 +190,9 @@ scaler = MinMaxScaler()
 # print(X[1])
 # print(X[1])
 # print(X[2])
-X = np.reshape(X, (60, 11550))
+X = np.reshape(X, (SAMPLE_COUNT, ACTIVITY_FRAMES * X_DIM * Y_DIM))
 X = scaler.fit_transform(X) # Normalise the input data.
-X = np.reshape(X, (60, 150, 7, 11))
+X = np.reshape(X, (SAMPLE_COUNT, ACTIVITY_FRAMES, Y_DIM, X_DIM))
 print("Fitting finished")
 # print(X[0])
 
@@ -204,7 +223,7 @@ class CNNLSTM(nn.Module):
         self.seq_len = seq_len
         self.n_layers = n_layers
         # 2D CNN layer.
-        self.c = nn.Conv2d(in_channels = 150, out_channels = 150, kernel_size = 3, stride = 2)
+        self.c = nn.Conv2d(in_channels = ACTIVITY_FRAMES, out_channels = ACTIVITY_FRAMES, kernel_size = 3, stride = 2)
         self.lstm = nn.LSTM(
             input_size = n_features,
             hidden_size = n_hidden,
@@ -215,14 +234,14 @@ class CNNLSTM(nn.Module):
     # IMPORTANT! This assumes that the sequences input from the csv are of a uniform length - if for some reason they are not, you need to add additional code to make sure that they are the same length.
     def reset_hidden_state(self):
         self.hidden = (
-            torch.zeros(1, 1, 4),#self.n_layers, self.seq_len, self.n_hidden),
-            torch.zeros(1, 1, 4)#self.n_layers, self.seq_len, self.n_hidden)
+            torch.zeros(1, 1, 8),#self.n_layers, self.seq_len, self.n_hidden),
+            torch.zeros(1, 1, 8)#self.n_layers, self.seq_len, self.n_hidden)
         )
 
     def forward(self, seq):
         seq = self.c(seq)#seq.view(len(seq), 10, 50))
         lstm_out, self.hidden = self.lstm(
-            seq.view(150, -1),#seq.view(self.seq_len, 32),#len(seq), self.seq_len - 1, -1),
+            seq.view(ACTIVITY_FRAMES, -1),#seq.view(self.seq_len, 32),#len(seq), self.seq_len - 1, -1),
             # self.hidden
         )
         last_time_step = lstm_out.view(self.seq_len, len(seq), self.n_hidden)[-1]
@@ -231,7 +250,7 @@ class CNNLSTM(nn.Module):
 
 def train_model(model, train_data, train_labels, val_data = None, val_labels = None, num_epochs = 100, verbose = 10, patience = 10):
     loss_fn = torch.nn.L1Loss() # L1 loss by default.
-    optimiser = torch.optim.Adam(model.parameters(), lr = 0.001) # Default learning rate is 0.001.
+    optimiser = torch.optim.Adam(model.parameters(), lr = 0.0001) # Default learning rate is 0.001.
     # Histograms used to monitor training progress.
     train_hist = []
     val_hist = []
@@ -285,11 +304,11 @@ def train_model(model, train_data, train_labels, val_data = None, val_labels = N
 
     return model, train_hist, val_hist
 
-seq_length = 150 # This needs to be tailored - based on the number of frames in a captured sequence of activity data.
+seq_length = ACTIVITY_FRAMES # This needs to be tailored - based on the number of frames in a captured sequence of activity data.
 
 model = CNNLSTM(
     n_features = 15,
-    n_hidden = 4,
+    n_hidden = 32,
     seq_len = seq_length,
     n_layers = 1
 )

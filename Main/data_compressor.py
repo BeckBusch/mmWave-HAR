@@ -96,7 +96,17 @@ def format_sequences(df, count, p_index):
             writer.writerows(pT) # Use writerow for single list
 
 path_list = [] # Path to the csv file with all of the activity data (change this to get different activity data if individual files are too big).
-path_list.append('C:\\Data\\output.csv')
+path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\Blank.csv')
+path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\KevinClapping.csv')
+path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\KevinJacks.csv')
+path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\KevinStanding.csv')
+path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\KevinWalking.csv')
+path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\KevinWaving.csv')
+path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\SamClapping.csv')
+path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\SamJacks.csv')
+path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\SamStanding.csv')
+path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\SamWalking.csv')
+path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\SamWaving.csv')
 
 for path in path_list:
 
