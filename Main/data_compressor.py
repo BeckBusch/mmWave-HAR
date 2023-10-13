@@ -85,12 +85,12 @@ def format_sequences(df, count, p_index):
         # pd.DataFrame(pt).to_csv("reduced_data.csv") # Append to reduced data csv.
     
     if p_index == 0:
-        with open('reduced_data.csv', 'w', newline='') as file:
+        with open('reduced_data2.csv', 'w', newline='') as file:
         # Step 4: Using csv.writer to write the list to the CSV file
             writer = csv.writer(file)
             writer.writerows(pT) # Use writerow for single list
     else:
-        with open('reduced_data.csv', 'a', newline='') as file:
+        with open('reduced_data2.csv', 'a', newline='') as file:
         # Step 4: Using csv.writer to write the list to the CSV file
             writer = csv.writer(file)
             writer.writerows(pT) # Use writerow for single list

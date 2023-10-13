@@ -14,8 +14,10 @@ from matplotlib import rc
 from sklearn.preprocessing import MinMaxScaler
 from pandas.plotting import register_matplotlib_converters
 from torch import nn, optim
+import torchmetrics
 from enum import Enum
 import csv
+from sklearn.utils import shuffle
 
 # Class names will change based on the information being fed to the network; this is just an example.
 class ClassNames(Enum):
@@ -40,7 +42,7 @@ RANDOM_SEED = 33
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
 
-path = 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\reduced_data.csv' # Path to the csv file with all of the activity data.
+path = 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\reduced_data2.csv' # Path to the csv file with all of the activity data.
 print(f"Path being used is: {path}")
 
 # Read in the activity data, create a dataframe for it with the rows and columns transposed for optimisation.
@@ -81,8 +83,8 @@ print("Activity data has been read in")
 print(f"Activity count is {activity_count}\n")
 
 # Image dimensions are based on the radar configuration, these need to be set and changed inside of this file accordingly.
-X_DIM = 11 # For example.
-Y_DIM = 7 # For example.
+X_DIM = 11 #36 # For example.
+Y_DIM = 7 #18 # For example.
 XY_DIM = X_DIM * Y_DIM
 
 def format_sequences(df, count):
@@ -192,8 +194,10 @@ scaler = MinMaxScaler()
 # print(X[2])
 X = np.reshape(X, (SAMPLE_COUNT, ACTIVITY_FRAMES * X_DIM * Y_DIM))
 X = scaler.fit_transform(X) # Normalise the input data.
-X = np.reshape(X, (SAMPLE_COUNT, ACTIVITY_FRAMES, Y_DIM, X_DIM))
+# X = np.reshape(X, (SAMPLE_COUNT, ACTIVITY_FRAMES, Y_DIM, X_DIM))
 print("Fitting finished")
+
+X, y = shuffle(X, y) # Shuffle the data!
 # print(X[0])
 
 # Divide the dataset into training, validation and testing sets.
@@ -234,8 +238,8 @@ class CNNLSTM(nn.Module):
     # IMPORTANT! This assumes that the sequences input from the csv are of a uniform length - if for some reason they are not, you need to add additional code to make sure that they are the same length.
     def reset_hidden_state(self):
         self.hidden = (
-            torch.zeros(1, 1, 8),#self.n_layers, self.seq_len, self.n_hidden),
-            torch.zeros(1, 1, 8)#self.n_layers, self.seq_len, self.n_hidden)
+            torch.zeros(self.n_layers, 150, self.n_hidden),#self.n_layers, self.seq_len, self.n_hidden),
+            torch.zeros(self.n_layers, 150, self.n_hidden)#self.n_layers, self.seq_len, self.n_hidden)
         )
 
     def forward(self, seq):
@@ -248,9 +252,9 @@ class CNNLSTM(nn.Module):
         y_pred = self.linear(last_time_step)
         return y_pred
 
-def train_model(model, train_data, train_labels, val_data = None, val_labels = None, num_epochs = 100, verbose = 10, patience = 10):
+def train_model(model, train_data, train_labels, X_test, y_test, val_data = None, val_labels = None, num_epochs = 100, verbose = 10, patience = 10):
     loss_fn = torch.nn.L1Loss() # L1 loss by default.
-    optimiser = torch.optim.Adam(model.parameters(), lr = 0.0001) # Default learning rate is 0.001.
+    optimiser = torch.optim.Adam(model.parameters(), lr = 0.001) # Default learning rate is 0.001.
     # Histograms used to monitor training progress.
     train_hist = []
     val_hist = []
@@ -300,26 +304,64 @@ def train_model(model, train_data, train_labels, val_data = None, val_labels = N
             if t % verbose == 0:
                 print(f'Epoch {t} train loss: {epoch_loss / len(train_data)} val loss: {val_loss / len(val_data)}')
 
+                # accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=6)
+                acc = 0
+
+                for test_idx, test_seq in enumerate(X_test):
+
+                    model.reset_hidden_state() # Reset the hidden state with every sequence.
+
+                    test_seq = torch.unsqueeze(test_seq, 0)
+                    y_test_pred = model(test_seq)
+                    # print(torch.round(y_test_pred).detach().numpy()[0])
+                    # print(y_test[test_idx].numpy())
+                    
+                    if (torch.round(y_test_pred).detach().numpy()[0] == y_test[test_idx].numpy()):
+                        acc += 1
+
+                acc /= test_idx
+
+                    #print(np.shape(y_test))
+                    # acc = accuracy(torch.round(y_test_pred), y_test[test_idx])
+                    # print(acc)
+
+                #acc = accuracy()
+                
+                # y_pred = model(X_test)
+
+                # acc = 0
+                # qq_len = len(X_test.flatten() / (150 * 77))
+                # for qq in range(qq_len):
+                #     # For each activity in test
+                #     acc += accuracy(model(X_test[qq]), y_test[qq])
+                # acc /= qq_len
+
+                print(f'Testing accuracy is {acc}\n')
+
             # Can add early stopping if wanted, not using currently.
 
     return model, train_hist, val_hist
 
 seq_length = ACTIVITY_FRAMES # This needs to be tailored - based on the number of frames in a captured sequence of activity data.
+accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=6)
+# print(f'Testing accuracy is {accuracy(model(X_test), y_test)}')
 
 model = CNNLSTM(
-    n_features = 15,
+    n_features = 15, #136
     n_hidden = 8,
     seq_len = seq_length,
-    n_layers = 3
+    n_layers = 1
 )
 
 model, train_hist, val_hist = train_model(
     model, 
     X_train,
     y_train,
+    X_test,
+    y_test,
     X_val,
     y_val,
-    num_epochs = 100,
+    num_epochs = 300,
     verbose = 10,
     patience = 50
 )

@@ -14,14 +14,15 @@ from torch import nn, optim
 from enum import Enum
 import csv
 import sys
+from sklearn.utils import shuffle
 
 # TODO:
 
 # Defines
-TARGET_FRAMES = 8 # Input size to the classifier that we want to reduce to.
+TARGET_FRAMES = 16 # Input size to the classifier that we want to reduce to.
 INTERPOLATION_FRAMES = TARGET_FRAMES + 2 # Need 2 additional frames, 1 for final frame which is removed, and first frame is not used.
 
-STEP_SIZE = 8 # Number of frames to step across.
+STEP_SIZE = 16 # Number of frames to step across.
 
 # From planning:
 # Input size (min e.g. 8 to max e.g. 64)
@@ -229,7 +230,8 @@ for j in range(activity_count):
 all_frames = []
 for j in range(activity_count):
     this_indices = all_select_frames[j]
-    this_indices = this_indices.sort() # Sort indices in ascending order
+    # print(this_indices)
+    # print(len(this_indices))
     this_frames = []
     for k in range(TARGET_FRAMES):
         this_frames.append(X[j][this_indices[k]])
@@ -246,6 +248,9 @@ scaler = MinMaxScaler()
 X = np.reshape(X, (activity_count, TARGET_FRAMES * Y_DIM * X_DIM))
 X = scaler.fit_transform(X) # Normalise the input data.
 X = np.reshape(X, (activity_count, TARGET_FRAMES, Y_DIM, X_DIM))
+
+X, y = shuffle(X, y) # Shuffle the data!
+
 print("Fitting finished")
 # print(X[0])
 
@@ -287,8 +292,8 @@ class CNNLSTM(nn.Module):
     # IMPORTANT! This assumes that the sequences input from the csv are of a uniform length - if for some reason they are not, you need to add additional code to make sure that they are the same length.
     def reset_hidden_state(self):
         self.hidden = (
-            torch.zeros(1, 1, 4),#self.n_layers, self.seq_len, self.n_hidden),
-            torch.zeros(1, 1, 4)#self.n_layers, self.seq_len, self.n_hidden)
+            torch.zeros(1, 1, self.n_hidden),#self.n_layers, self.seq_len, self.n_hidden),
+            torch.zeros(1, 1, self.n_hidden)#self.n_layers, self.seq_len, self.n_hidden)
         )
 
     def forward(self, seq):
@@ -353,6 +358,24 @@ def train_model(model, train_data, train_labels, val_data = None, val_labels = N
             if t % verbose == 0:
                 print(f'Epoch {t} train loss: {epoch_loss / len(train_data)} val loss: {val_loss / len(val_data)}')
 
+                acc = 0
+
+                for test_idx, test_seq in enumerate(X_test):
+
+                    model.reset_hidden_state() # Reset the hidden state with every sequence.
+
+                    test_seq = torch.unsqueeze(test_seq, 0)
+                    y_test_pred = model(test_seq)
+                    # print(torch.round(y_test_pred).detach().numpy()[0])
+                    # print(y_test[test_idx].numpy())
+                    
+                    if (torch.round(y_test_pred).detach().numpy()[0] == y_test[test_idx].numpy()):
+                        acc += 1
+
+                acc /= test_idx
+
+                print(f'Testing accuracy is {acc}\n')
+
             # Can add early stopping if wanted, not using currently.
 
     return model, train_hist, val_hist
@@ -361,7 +384,7 @@ seq_length = TARGET_FRAMES # This needs to be tailored - based on the number of 
 
 model = CNNLSTM(
     n_features = 15,
-    n_hidden = 4,
+    n_hidden = 8,
     seq_len = seq_length,
     n_layers = 1
 )
@@ -372,7 +395,7 @@ model, train_hist, val_hist = train_model(
     y_train,
     X_val,
     y_val,
-    num_epochs = 100,
+    num_epochs = 500,
     verbose = 10,
     patience = 50
 )

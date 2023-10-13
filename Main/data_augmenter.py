@@ -12,7 +12,7 @@ FRAMES_PER_SECOND = 25 # From mmWave Studio.
 SAMPLE_LENGTH = 6 # Sample length in seconds.
 IMAGE_PIXELS = 77 # Pixels in a single image.
 
-path = 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\reduced_data.csv' # Path to the csv file with all of the activity data.
+path = 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\reduced_data2.csv' # Path to the csv file with all of the activity data.
 # The path being used here is for the reduced data i.e. the data that has had vertical (and potentially horizontal) image compression done.
 print(f"Path being used is: {path}")
 
