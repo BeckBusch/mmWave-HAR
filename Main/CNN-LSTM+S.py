@@ -6,6 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from torch import nn
 from enum import Enum
 from sklearn.utils import shuffle
+import joblib
 
 # Class names for each of the 5 (+1) activity classes.
 class ClassNames(Enum):
@@ -160,6 +161,10 @@ X = np.reshape(X, (activity_count, TARGET_FRAMES * Y_DIM * X_DIM))
 X = scaler.fit_transform(X) # Normalise the input data.
 X = np.reshape(X, (activity_count, TARGET_FRAMES, Y_DIM, X_DIM))
 print("Fitting finished")
+
+# Save the MinMaxScaler
+scaler_fname = "scaler.pkl"
+joblib.dump(scaler, scaler_fname) 
 
 X, y = shuffle(X, y) # Shuffle the data!
 
