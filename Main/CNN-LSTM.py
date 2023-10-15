@@ -1,48 +1,35 @@
 # CNN-LSTM Model for testing on gathered human activity data.
 # Using pytorch implementation.
-
-# Import statements
 import torch
 import numpy as np
-import os
-import pandas as pd
-from tqdm import tqdm
-import seaborn as sns
-# from pylab import rcParams
-import matplotlib.pyplot as plt
-from matplotlib import rc
 from sklearn.preprocessing import MinMaxScaler
-from pandas.plotting import register_matplotlib_converters
-from torch import nn, optim
-import torchmetrics
+from torch import nn
 from enum import Enum
-import csv
 from sklearn.utils import shuffle
 
-# Class names will change based on the information being fed to the network; this is just an example.
+# Class names for each of the 5 (+1) activity classes.
 class ClassNames(Enum):
     STANDING = 0
     WALKING = 1
     CLAPPING = 2
     WAVING = 3
-    JACKS = 4
+    JUMPINGJACKS = 4
     EMPTY = 5
 
-# Matplotlib additional arguments (jupyter notebook only).
-# %matplotlib inline
-# %config InlineBackend.figure_format='retina'
+# NOTE: Increased the number of hidden nodes for better learning.
 
-SAMPLE_COUNT = 278
+ACTIVITY_CLASSES = len(ClassNames)
+ACTIVITY_COUNT_PER_PERSON = 20 # 20 samples of activity data was gathered for each activity, per person.
+NUM_PARTICIPANTS = 3 # Participant data was gathered from 3 people in the research team.
+SAMPLE_COUNT = ACTIVITY_CLASSES * ACTIVITY_COUNT_PER_PERSON * NUM_PARTICIPANTS # Total number of activity samples.
 ACTIVITY_FRAMES = 150 # Number of frames for a single activity sample (6s).
 
-sns.set(style='whitegrid', palette='muted', font_scale=1.2)
-# rcParams['figure.figsize'] = 14, 10
-register_matplotlib_converters()
+# Seed setting.
 RANDOM_SEED = 33
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
 
-path = 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\reduced_data2.csv' # Path to the csv file with all of the activity data.
+path = 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\reduced_data.csv' # Path to the csv file with all of the activity data.
 print(f"Path being used is: {path}")
 
 # Read in the activity data, create a dataframe for it with the rows and columns transposed for optimisation.
@@ -58,58 +45,40 @@ for i in range(activity_count):
     temp[-1] = temp[-1].split('\n')[0] # Remove the newline character at the end.
     activity_name = temp[0] 
     temp = temp[1:] # Remove the activity name (it is a string, not complex dtype, so separate it).
-    # cmplx = []
-    # for s in temp:
-    #     cmplx.append(s)
     temp.insert(0, activity_name)
-    # print(temp)
     all_data.append(temp)
 
-# activity_data = pd.read_csv(path) # We are assuming that the data is in csv file format here, if it isn't, then we need to do some additional pre-processing.
 print("Activity data has been read in")
 
-# Assume the data is in the format:
+# Data is in the format:
 # Activity sample 1: Class, Image 1, Image 2, Image 3, etc. 
 # Activity sample 2: Class, Image 1, Image 2, Image 3, etc.
 # etc.
 
-# Then, reading a single row will give an entire activity, we need to split this activity according to the size of the captured frames.
-
-# If a captured frame has, for example, a resolution of 100x100 px, then we can take the first 10000 values as the first image, and reshape accordingly.
-# Although the heatmap displays two different colour extremes (blue and orange), the image data is still 2-dimensional.
-
-# Start by getting the number of lines in the csv, this is how many activities we have data for.
-
 print(f"Activity count is {activity_count}\n")
 
-# Image dimensions are based on the radar configuration, these need to be set and changed inside of this file accordingly.
-X_DIM = 11 #36 # For example.
-Y_DIM = 7 #18 # For example.
+# Image dimensions are based on the compressed data size.
+X_DIM = 11 
+Y_DIM = 7 
 XY_DIM = X_DIM * Y_DIM
 
 def format_sequences(df, count):
     px = np.empty(X_DIM) # This list will contain a row of pixels for a single frame.
-    py = [] # This list will contain a set of pixel rows for a single frame (one frame).
-    pt = [] # This list will contain the sequence of frames.
-
-    pT = [] # This list will contain everything (one item per class label).
+    py = [] # This list will contain a set of pixel rows for a single frame.
+    pt = [] # This list will contain the sequence of frames belonging to a single activity.
+    pT = [] # Contains all frames for all sequences.
 
     classes = [] # This list will contain the classes for each of the activity sequences.
     class_nums = [] # This list contains the enumerated classes.
 
     xptr = 0 # Pointer for the end of the most recent row.
     yptr = 0 # Pointer for the end of the most recent frame.
-    #print(df[0])
-    #print(df[1])
 
-    # We need to start at 1 because the first values are not reliable.
     for i in range(count):
         this_activity = df[i] # Get the next activity.
-        #print(this_activity)
-        #print(this_activity.iloc[0])
         classes.append(this_activity[0]) # Append the class.
         this_activity = this_activity[1:] # Remove the class before formatting the rest of the data.
-        # Convert to float otherwise its just a string
+        # Convert all values to floats.
         temp = []
         for j in range(len(this_activity)):
             temp.append(float(this_activity[j]))
@@ -119,86 +88,47 @@ def format_sequences(df, count):
             for k in range(Y_DIM):
                 px = np.array(this_activity[xptr * X_DIM + yptr * XY_DIM : (xptr + 1) * X_DIM + yptr * XY_DIM])
                 # If there are zeros where there shouldn't be, the below code handles this so it doesn't break everything.
-                # print(px[:10])
-                # print(pp[:10])
                 py.append(np.array(px)) # Append as array.
-                # print(pp[:10])
-                # print("\n\n")
                 xptr += 1
-            # print(py[:10])
-            # print("\n\n")
             pt.append(np.array(py)) # Append as array.
             py = [] # Reset py.
             yptr += 1
             xptr = 0
         pT.append(np.array(pt)) # Append as array.
         yptr = 0
-        # print(pt[:10])
-        # print("\n\n")
         pt = [] # Reset pt.
 
     # Now we need to convert the classes to a numerical (enumerated) representation.
     for i in range(len(classes)):
-        this_class = classes[i].split('_')[0] # MAKE SURE TO CHANGE IF NECESSARY
-        # Can replace this with a better structure if needed, for 3 classes this should be sufficient for now.
-        if this_class == "blank":
+        this_class = classes[i].split('_')[0] # Get the class name.
+        if this_class == "empty":
             class_nums.append(ClassNames.EMPTY.value)
-        elif this_class == "kevinclapping":
+        elif this_class == "clapping":
             class_nums.append(ClassNames.CLAPPING.value)
-        elif this_class == "KevinJacks":
-            class_nums.append(ClassNames.JACKS.value)
-        elif this_class == "kevinStanding":
+        elif this_class == "jumpingjacks":
+            class_nums.append(ClassNames.JUMPINGJACKS.value)
+        elif this_class == "standing":
             class_nums.append(ClassNames.STANDING.value)
-        elif this_class == "kevinWalking":
+        elif this_class == "walking":
             class_nums.append(ClassNames.WALKING.value)
-        elif this_class == "kevinWaving":
+        elif this_class == "waving":
             class_nums.append(ClassNames.WAVING.value)
-        elif this_class == "samClapping":
-            class_nums.append(ClassNames.CLAPPING.value)
-        elif this_class == "SamJacks":
-            class_nums.append(ClassNames.JACKS.value)
-        elif this_class == "samStanding":
-            class_nums.append(ClassNames.STANDING.value)
-        elif this_class == "SamWalking":
-            class_nums.append(ClassNames.WALKING.value)
-        elif this_class == "samWaving":
-            class_nums.append(ClassNames.WAVING.value)
-        elif this_class == "samWalking":
-            class_nums.append(ClassNames.WALKING.value)
 
-    # At the end of this code execution, pt will contain lists of lists, representing the 2D images.
+    # At the end of this code execution, pT will contain lists of lists, representing the 2D images.
     # Class nums contains a numerical representation of the classes, which can be used for training purposes.
-    print('\n')
-    print(len(pT), len(class_nums))
     return np.array(pT), np.array(class_nums)
 
 # Format the data from csv.
 X, y = format_sequences(all_data, activity_count)
 print("Formatting finished")
-#print(X)
-#print(y)
-
 print(np.shape(X))
 
-# print(X[0])
-# print("\n\n")
-# print(X[1])
-# print("\n\n")
-# print(X[2])
-# print("\n\n")
-
 scaler = MinMaxScaler()
-# X = np.ravel(X) # 1D array
-# print(X[1])
-# print(X[1])
-# print(X[2])
 X = np.reshape(X, (SAMPLE_COUNT, ACTIVITY_FRAMES * X_DIM * Y_DIM))
 X = scaler.fit_transform(X) # Normalise the input data.
-# X = np.reshape(X, (SAMPLE_COUNT, ACTIVITY_FRAMES, Y_DIM, X_DIM))
 print("Fitting finished")
 
 X, y = shuffle(X, y) # Shuffle the data!
-# print(X[0])
 
 # Divide the dataset into training, validation and testing sets.
 train_size = int(activity_count * 0.8)
@@ -235,18 +165,17 @@ class CNNLSTM(nn.Module):
         )
         self.linear = nn.Linear(in_features = n_hidden, out_features = 1)
 
-    # IMPORTANT! This assumes that the sequences input from the csv are of a uniform length - if for some reason they are not, you need to add additional code to make sure that they are the same length.
+    # IMPORTANT! This assumes that the sequences input from the csv are of a uniform length.
     def reset_hidden_state(self):
         self.hidden = (
-            torch.zeros(self.n_layers, 150, self.n_hidden),#self.n_layers, self.seq_len, self.n_hidden),
-            torch.zeros(self.n_layers, 150, self.n_hidden)#self.n_layers, self.seq_len, self.n_hidden)
+            torch.zeros(self.n_layers, ACTIVITY_FRAMES, self.n_hidden),
+            torch.zeros(self.n_layers, ACTIVITY_FRAMES, self.n_hidden)
         )
 
     def forward(self, seq):
         seq = self.c(seq.view(ACTIVITY_FRAMES, 1, Y_DIM, X_DIM))
         lstm_out, self.hidden = self.lstm(
-            seq.view(ACTIVITY_FRAMES, -1),#seq.view(self.seq_len, 32),#len(seq), self.seq_len - 1, -1),
-            # self.hidden
+            seq.view(ACTIVITY_FRAMES, -1),
         )
         last_time_step = lstm_out.view(self.seq_len, self.n_hidden)[-1]
         y_pred = self.linear(last_time_step)
@@ -255,9 +184,6 @@ class CNNLSTM(nn.Module):
 def train_model(model, train_data, train_labels, X_test, y_test, val_data = None, val_labels = None, num_epochs = 100, verbose = 10, patience = 10):
     loss_fn = torch.nn.L1Loss() # L1 loss by default.
     optimiser = torch.optim.Adam(model.parameters(), lr = 0.001) # Default learning rate is 0.001.
-    # Histograms used to monitor training progress.
-    train_hist = []
-    val_hist = []
 
     for t in range(num_epochs):
         epoch_loss = 0
@@ -268,9 +194,6 @@ def train_model(model, train_data, train_labels, X_test, y_test, val_data = None
             model.reset_hidden_state()
 
             seq = torch.unsqueeze(seq, 0)
-            # seq = seq[0] # Remove the first dimension.
-            # seq.reshape(100, 10, 50)
-            # print(seq.size())
             y_pred = model(seq)
             loss = loss_fn(y_pred[0].float(), train_labels[idx]) # Calculate the loss after 1 step, then update the weights.
 
@@ -279,8 +202,6 @@ def train_model(model, train_data, train_labels, X_test, y_test, val_data = None
             optimiser.step()
 
             epoch_loss += loss.item()
-
-        train_hist.append(epoch_loss / len(train_data))
 
         if val_data is not None:
 
@@ -298,62 +219,37 @@ def train_model(model, train_data, train_labels, X_test, y_test, val_data = None
 
                     val_loss += val_step_loss
 
-            val_hist.append(val_loss / len(val_data))
-
             # Print the loss based on verbose value (pseudo-verbose).
             if t % verbose == 0:
                 print(f'Epoch {t} train loss: {epoch_loss / len(train_data)} val loss: {val_loss / len(val_data)}')
 
-                # accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=6)
+                # Manual accuracy calculation.
                 acc = 0
-
                 for test_idx, test_seq in enumerate(X_test):
 
                     model.reset_hidden_state() # Reset the hidden state with every sequence.
 
                     test_seq = torch.unsqueeze(test_seq, 0)
                     y_test_pred = model(test_seq)
-                    # print(torch.round(y_test_pred).detach().numpy()[0])
-                    # print(y_test[test_idx].numpy())
                     
                     if (torch.round(y_test_pred).detach().numpy()[0] == y_test[test_idx].numpy()):
                         acc += 1
 
                 acc /= test_idx
-
-                    #print(np.shape(y_test))
-                    # acc = accuracy(torch.round(y_test_pred), y_test[test_idx])
-                    # print(acc)
-
-                #acc = accuracy()
-                
-                # y_pred = model(X_test)
-
-                # acc = 0
-                # qq_len = len(X_test.flatten() / (150 * 77))
-                # for qq in range(qq_len):
-                #     # For each activity in test
-                #     acc += accuracy(model(X_test[qq]), y_test[qq])
-                # acc /= qq_len
-
                 print(f'Testing accuracy is {acc}\n')
 
             # Can add early stopping if wanted, not using currently.
 
-    return model, train_hist, val_hist
-
-seq_length = ACTIVITY_FRAMES # This needs to be tailored - based on the number of frames in a captured sequence of activity data.
-accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=6)
-# print(f'Testing accuracy is {accuracy(model(X_test), y_test)}')
+    return model
 
 model = CNNLSTM(
-    n_features = 15, #136
-    n_hidden = 8,
-    seq_len = seq_length,
+    n_features = 15,
+    n_hidden = 20,
+    seq_len = ACTIVITY_FRAMES,
     n_layers = 1
 )
 
-model, train_hist, val_hist = train_model(
+model = train_model(
     model, 
     X_train,
     y_train,
@@ -366,13 +262,9 @@ model, train_hist, val_hist = train_model(
     patience = 50
 )
 
+# Save the model once training is complete.
 torch.save(model, 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\CNN-LSTM_model.pth')
 print("Model saved successfully")
-
-plt.figure(figsize = (14, 10)) # Attempt to set the figure size using an alternative method.
-plt.plot(train_hist, label = "Training loss")
-plt.plot(val_hist, label = "Val loss")
-plt.legend()
 
 
 
