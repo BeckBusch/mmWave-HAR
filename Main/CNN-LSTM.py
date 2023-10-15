@@ -366,6 +366,9 @@ model, train_hist, val_hist = train_model(
     patience = 50
 )
 
+torch.save(model, 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\CNN-LSTM_model.pth')
+print("Model saved successfully")
+
 plt.figure(figsize = (14, 10)) # Attempt to set the figure size using an alternative method.
 plt.plot(train_hist, label = "Training loss")
 plt.plot(val_hist, label = "Val loss")
