@@ -3,20 +3,10 @@
 # Import statements
 import torch
 import numpy as np
-import os
-import pandas as pd
-from tqdm import tqdm
-import seaborn as sns
-# from pylab import rcParams
 import matplotlib.pyplot as plt
 from matplotlib import rc
-from sklearn.preprocessing import MinMaxScaler
-from pandas.plotting import register_matplotlib_converters
-from torch import nn, optim
-import torchmetrics
+from torch import nn
 from enum import Enum
-import csv
-from sklearn.utils import shuffle
 import joblib
 
 # Class names for each of the 5 (+1) activity classes.
@@ -30,10 +20,14 @@ class ClassNames(Enum):
 
 TARGET_FRAMES = 16 # Input size to the classifier that we want to reduce to.
 INTERPOLATION_FRAMES = TARGET_FRAMES + 2 # Need 2 additional frames, 1 for final frame which is removed, and first frame is not used.
+SAMPLE_LENGTH = 6 # Sample length in seconds.
+MIN_PASS_LENGTH = 2 # Minimum length of an activity sequence to make inferences from (in seconds).
+FRAMES_PER_SECOND = 25 # Number of frames in one second of radar data.
+STEP_SIZE = 5 # Number of frames to step through by - corresponds to ~0.5s.
 
+# Path to the model and activity to be evaluated.
 PATH = 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\CNN-LSTM+S_model.pth'
-activity_path = 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\reduced_data.csv'
-
+activity_path = 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\eval.csv'
 
 class CNNLSTM(nn.Module):
     def __init__(self, n_features, n_hidden, seq_len, n_layers):
@@ -66,10 +60,9 @@ class CNNLSTM(nn.Module):
         y_pred = self.linear(last_time_step)
         return y_pred
 
-# Read in the activity data, create a dataframe for it with the rows and columns transposed for optimisation.
-activity_data = open(activity_path).readlines()
-
-seq = activity_data[92]
+# Read in the activity data.
+seq = open(activity_path).readline()
+print("Activity data has been read in")
 
 # Format the activity data frames.
 seq = seq.split(',')
@@ -77,8 +70,6 @@ seq[-1] = seq[-1].split('\n')[0] # Remove the newline character at the end.
 activity_name = seq[0] 
 seq = seq[1:] # Remove the activity name (it is a string, not complex dtype, so separate it).
 seq.insert(0, activity_name)
-
-print("Activity data has been read in")
 
 # Image dimensions are based on the radar configuration, these need to be set and changed inside of this file accordingly.
 X_DIM = 11 #36 # For example.
@@ -114,94 +105,106 @@ def format_seq(seq):
     yptr = 0
 
     # Need to convert the class to a numerical (enumerated) representation.
-    this_class = class_name.split('_')[0] # Get the class name.
+    class_names = [class_name.split('_')[0], class_name.split('_')[1]]
 
-    if this_class == "empty":
-        class_num = ClassNames.EMPTY.value
-    elif this_class == "clapping":
-        class_num = ClassNames.CLAPPING.value
-    elif this_class == "jumpingjacks":
-        class_num = ClassNames.JUMPINGJACKS.value
-    elif this_class == "standing":
-        class_num = ClassNames.STANDING.value
-    elif this_class == "walking":
-        class_num = ClassNames.WALKING.value
-    elif this_class == "waving":
-        class_num = ClassNames.WAVING.value
+    class_nums = []
+    for this_class in class_names:
+        if this_class == "empty":
+            class_num = ClassNames.EMPTY.value
+        elif this_class == "clapping":
+            class_num = ClassNames.CLAPPING.value
+        elif this_class == "jumpingjacks":
+            class_num = ClassNames.JUMPINGJACKS.value
+        elif this_class == "standing":
+            class_num = ClassNames.STANDING.value
+        elif this_class == "walking":
+            class_num = ClassNames.WALKING.value
+        elif this_class == "waving":
+            class_num = ClassNames.WAVING.value
+        class_nums.append(class_num)
 
     # At the end of this code execution, pt will contain the frames for this activity.
-    # Class num is a numerical representation of the class.
-    return np.array(pt), np.array(class_num)
-
+    # Class nums is a numerical representation of the class(es).
+    return np.array(pt), np.array(class_nums)
 
 # Format the data from csv.
 X, y = format_seq(seq)
-print(y)
 print("Formatting finished")
 print(np.shape(X))
-# np.reshape(X, (1, 150, 7, 11))
-print(np.shape(X))
 
-# Create an array containing the average pixel value for each frame.
-averages = []
-for k in range(len(X)):
-    this_frame = X[k]
-    this_avg = np.average(this_frame) # Get the average pixel value for this frame.
-    averages.append(this_avg)
-max_frames = []
-select_frames = []
-# We want half of the target frames to be peak values, hence divide by 2.
-for n in range(round(INTERPOLATION_FRAMES / 2)):
-    section_size = round(np.floor(len(averages) / (INTERPOLATION_FRAMES / 2)))
-    current_max_index = averages.index(max(averages[n * section_size : (n + 1) * section_size]))
-    max_frames.append(current_max_index)
-# After the below loop, we should end up with TARGET_FRAMES number of frames in select_frames
-for n in range(round(INTERPOLATION_FRAMES / 2) - 1):
-    current_max_index = max_frames[n]
-    current_min_index = round((max_frames[n] + max_frames[n + 1]) / 2)
-    # Attach the next pair of min/max frames.
-    select_frames.append(current_max_index)
-    select_frames.append(current_min_index)
+all_select_frames = []
+# Cut up the activity data to produce a sample for each pass.
+pass_count = round(np.floor(FRAMES_PER_SECOND * (SAMPLE_LENGTH - MIN_PASS_LENGTH) / STEP_SIZE))
+for j in range(pass_count):
 
-print(select_frames)
+    # Only fetch the frames for this pass.
+    this_pass_frames = X[0:FRAMES_PER_SECOND * MIN_PASS_LENGTH + j * STEP_SIZE]
+
+    # Create an array containing the average pixel value for each frame.
+    averages = []
+    for k in range(len(this_pass_frames)):
+        this_frame = this_pass_frames[k]
+        this_avg = np.average(this_frame) # Get the average pixel value for this frame.
+        averages.append(this_avg)
+    max_frames = []
+    select_frames = []
+    # We want half of the target frames to be peak values, hence divide by 2.
+    for n in range(round(INTERPOLATION_FRAMES / 2)):
+        section_size = round(np.floor(len(averages) / (INTERPOLATION_FRAMES / 2)))
+        current_max_index = averages.index(max(averages[n * section_size : (n + 1) * section_size]))
+        max_frames.append(current_max_index)
+    # After the below loop, we should end up with TARGET_FRAMES number of frames in select_frames
+    for n in range(round(INTERPOLATION_FRAMES / 2) - 1):
+        current_max_index = max_frames[n]
+        current_min_index = round((max_frames[n] + max_frames[n + 1]) / 2)
+        # Attach the next pair of min/max frames.
+        select_frames.append(current_max_index)
+        select_frames.append(current_min_index)
+    all_select_frames.append(select_frames)
+
 # Append the selected frames based on the stored indices.
-frames = []
-for k in range(TARGET_FRAMES):
-    frames.append(X[select_frames[k]])
-
-X = frames # Re-assign the variable name.
-
-
-scaler_fname = "scaler.pkl"
-scaler = joblib.load(scaler_fname)
-
-X = np.reshape(X, (1, TARGET_FRAMES * Y_DIM * X_DIM))
-X = scaler.transform(X) # Normalise the input data.
-X = np.reshape(X, (1, TARGET_FRAMES, Y_DIM, X_DIM))
-print("Fitting finished")
+all_frames = []
+for j in range(pass_count):
+    this_indices = all_select_frames[j]
+    this_frames = []
+    for k in range(TARGET_FRAMES):
+        this_frames.append(X[this_indices[k]])
+    all_frames.append(this_frames)
 
 # Transform to a tensor.
 def make_Tensor(array):
-	return torch.from_numpy(array).float()
+    return torch.from_numpy(array).float()
 
-X = make_Tensor(X)
-y = make_Tensor(y)
+# MinMaxScaler.
+scaler_fname = "scaler.pkl"
+scaler = joblib.load(scaler_fname)
 
-print(np.shape(select_frames))
-
+# Load in the saved model.
 model = torch.load(PATH)
 print("Model loaded successfully!")
 model.eval()
 
-with torch.no_grad():
-    preds = []
-    model.reset_hidden_state()
-    y_test_pred = model(X)
-    pred = torch.flatten(y_test_pred).item()
+preds = []
+for _ in range(pass_count):
 
-# print(seq)
-# y_pred = model(X)
-print(y)
+    X = all_frames[_] # Frames for the current pass.
 
-print(pred)
+    X = np.reshape(X, (1, TARGET_FRAMES * Y_DIM * X_DIM))
+    X = scaler.transform(X) # Normalise the input data.
+    X = np.reshape(X, (1, TARGET_FRAMES, Y_DIM, X_DIM))
+    X = make_Tensor(X)
+
+    # Make a prediction for this pass.
+    with torch.no_grad():
+        model.reset_hidden_state()
+        y_test_pred = model(X)
+        y_pred = torch.flatten(y_test_pred).item()
+        preds.append(y_pred)
+
+y = make_Tensor(y)
+y1 = torch.flatten(y[0]).item() # First class.
+# y2 = torch.flatten(y[1]).item()
+print(f"Actual activity class is: {ClassNames(y1).name}")
+
+print(preds)
 
