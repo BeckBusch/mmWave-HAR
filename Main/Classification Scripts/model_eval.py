@@ -185,6 +185,7 @@ print("Model loaded successfully!")
 model.eval()
 
 preds = []
+pred_names = []
 for _ in range(pass_count):
 
     X = all_frames[_] # Frames for the current pass.
@@ -200,6 +201,7 @@ for _ in range(pass_count):
         y_test_pred = model(X)
         y_pred = torch.flatten(y_test_pred).item()
         preds.append(y_pred)
+        pred_names.append(ClassNames(round(y_pred)).name)
 
 y = make_Tensor(y)
 y1 = torch.flatten(y[0]).item() # First class.
@@ -207,4 +209,5 @@ y1 = torch.flatten(y[0]).item() # First class.
 print(f"Actual activity class is: {ClassNames(y1).name}")
 
 print(preds)
+print(pred_names)
 
