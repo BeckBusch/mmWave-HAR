@@ -1,0 +1,97 @@
+{
+  "configGenerator": {
+    "createdBy": "mmWaveStudio",
+    "createdOn": "2023-08-09T11:27:28.7762045+12:00",
+    "isConfigIntermediate": 1
+  },
+  "currentVersion": {
+    "jsonCfgVersion": {
+      "major": 0,
+      "minor": 4,
+      "patch": 0
+    },
+    "DFPVersion": {
+      "major": 1,
+      "minor": 2,
+      "patch": 0
+    },
+    "SDKVersion": {
+      "major": 3,
+      "minor": 0,
+      "patch": 0
+    },
+    "mmwavelinkVersion": {
+      "major": 1,
+      "minor": 2,
+      "patch": 0
+    }
+  },
+  "lastBackwardCompatibleVersion": {
+    "DFPVersion": {
+      "major": 1,
+      "minor": 1,
+      "patch": 0
+    },
+    "SDKVersion": {
+      "major": 2,
+      "minor": 0,
+      "patch": 0
+    },
+    "mmwavelinkVersion": {
+      "major": 1,
+      "minor": 1,
+      "patch": 0
+    }
+  },
+  "regulatoryRestrictions": {
+    "frequencyRangeBegin_GHz": 77,
+    "frequencyRangeEnd_GHz": 81,
+    "maxBandwidthAllowed_MHz": 4000,
+    "maxTransmitPowerAllowed_dBm": 12
+  },
+  "systemConfig": {
+    "summary": "This is a comments field not passed to device",
+    "sceneParameters": {
+      "ambientTemperature_degC": 20,
+      "maxDetectableRange_m": 10,
+      "rangeResolution_cm": 5,
+      "maxVelocity_kmph": 26,
+      "velocityResolution_kmph": 2,
+      "measurementRate": 10,
+      "typicalDetectedObjectRCS": 1
+    }
+  },
+  "mmWaveDevices": [
+    {
+      "mmWaveDeviceId": 0,
+      "rfConfig": {
+        "waveformType": "legacyFrameChirp",
+        "MIMOScheme": "TDM",
+        "rlCalibrationDataFile": "",
+        "rlProfiles": [],
+        "rlChirps": [],
+        "rlBpmChirps": [],
+        "rlRfPhaseShiftCfgs": [],
+        "rlRfProgFiltConfs": [],
+        "rlLoopbackBursts": [],
+        "rlDynChirpCfgs": [],
+        "rlDynPerChirpPhShftCfgs": []
+      },
+      "rawDataCaptureConfig": {
+      },
+      "monitoringConfig": {
+      }
+    }
+  ],
+  "processingChainConfig": {
+    "detectionChain": {
+      "name": "TI_GenericChain",
+      "detectionLoss": 1,
+      "systemLoss": 1,
+      "implementationMargin": 2,
+      "detectionSNR": 12,
+      "theoreticalRxAntennaGain": 9,
+      "theoreticalTxAntennaGain": 9
+    }
+  }
+}
