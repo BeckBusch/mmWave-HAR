@@ -29,7 +29,7 @@ RANDOM_SEED = 33
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
 
-path = 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\reduced_data.csv' # Path to the csv file with all of the activity data.
+path = '..\\Shared Resources\\reduced_data.csv' # Path to the csv file with all of the activity data.
 print(f"Path being used is: {path}")
 
 # Read in the activity data, create a dataframe for it with the rows and columns transposed for optimisation.
@@ -263,7 +263,7 @@ model = train_model(
 )
 
 # Save the model once training is complete.
-torch.save(model, 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\CNN-LSTM_model.pth')
+torch.save(model, '..\\Trained Models\\CNN-LSTM_model.pth')
 print("Model saved successfully")
 
 

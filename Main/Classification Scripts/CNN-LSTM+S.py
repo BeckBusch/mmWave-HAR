@@ -25,7 +25,7 @@ RANDOM_SEED = 33
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
 
-path = 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\augmented_data.csv' # Path to the csv file with all of the activity data.
+path = '..\\Shared Resources\\augmented_data.csv' # Path to the csv file with all of the activity data.
 print(f"Path being used is: {path}")
 
 # Read in the activity data, create a dataframe for it with the rows and columns transposed for optimisation.
@@ -163,7 +163,7 @@ X = np.reshape(X, (activity_count, TARGET_FRAMES, Y_DIM, X_DIM))
 print("Fitting finished")
 
 # Save the MinMaxScaler
-scaler_fname = "scaler.pkl"
+scaler_fname = "..\\Trained Models\\scaler.pkl"
 joblib.dump(scaler, scaler_fname) 
 
 X, y = shuffle(X, y) # Shuffle the data!
@@ -299,5 +299,5 @@ model = train_model(
 )
 
 # Save the model once training is complete.
-torch.save(model, 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\CNN-LSTM+S_model.pth')
+torch.save(model, '..\\Trained Models\\CNN-LSTM+S_model.pth')
 print("Model saved successfully")

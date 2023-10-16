@@ -65,34 +65,34 @@ def format_sequences(df, count, p_index):
     
     # If we are only beginning to read in activities, write permissions should be granted in case the file doesn't exist yet, otherwise append.
     if p_index == 0:
-        with open('reduced_data.csv', 'w', newline='') as file:
+        with open('..\\Shared Resources\\reduced_data.csv', 'w', newline='') as file:
         # Using csv.writer to write the list to the CSV file.
             writer = csv.writer(file)
             writer.writerows(pT)
     else:
-        with open('reduced_data.csv', 'a', newline='') as file:
+        with open('..\\Shared Resources\\reduced_data.csv', 'a', newline='') as file:
         # Using csv.writer to write the list to the CSV file.
             writer = csv.writer(file)
             writer.writerows(pT)
 
 # Paths to csv files containing activity data.
 path_list = []
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\Blank.csv')
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\KevinClapping.csv')
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\KevinJacks.csv')
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\KevinStanding.csv')
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\KevinWalking.csv')
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\KevinWaving.csv')
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\SamClapping.csv')
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\SamJacks.csv')
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\SamStanding.csv')
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\SamWalking.csv')
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\SamWaving.csv')
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\BeckClapping.csv')
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\BeckJacks.csv')
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\BeckStanding.csv')
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\BeckWalking.csv')
-path_list.append('C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\BeckWaving.csv')
+path_list.append('..\\Shared Resources\\Blank.csv')
+path_list.append('..\\Shared Resources\\KevinClapping.csv')
+path_list.append('..\\Shared Resources\\KevinJacks.csv')
+path_list.append('..\\Shared Resources\\KevinStanding.csv')
+path_list.append('..\\Shared Resources\\KevinWalking.csv')
+path_list.append('..\\Shared Resources\\KevinWaving.csv')
+path_list.append('..\\Shared Resources\\SamClapping.csv')
+path_list.append('..\\Shared Resources\\SamJacks.csv')
+path_list.append('..\\Shared Resources\\SamStanding.csv')
+path_list.append('..\\Shared Resources\\SamWalking.csv')
+path_list.append('..\\Shared Resources\\SamWaving.csv')
+path_list.append('..\\Shared Resources\\BeckClapping.csv')
+path_list.append('..\\Shared Resources\\BeckJacks.csv')
+path_list.append('..\\Shared Resources\\BeckStanding.csv')
+path_list.append('..\\Shared Resources\\BeckWalking.csv')
+path_list.append('..\\Shared Resources\\BeckWaving.csv')
 
 for path in path_list:
 
@@ -101,7 +101,7 @@ for path in path_list:
     del activity_data[0] # Remove the headers at the top of the file.
 
     # Blank contains more sequences than the other files.
-    if path == 'C:\\Users\\Samuel Mason\\Downloads\\OneDrive_2023-10-11\\Raw CSV\\Blank.csv':
+    if path == '..\\Shared Resources\\Blank.csv':
         activity_count = ACTIVITY_COUNT_PER_PERSON * NUM_PARTICIPANTS
     else:
         activity_count = ACTIVITY_COUNT_PER_PERSON

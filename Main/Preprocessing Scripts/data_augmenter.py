@@ -10,7 +10,7 @@ FRAMES_PER_SECOND = 25 # From mmWave Studio.
 SAMPLE_LENGTH = 6 # Sample length in seconds.
 IMAGE_PIXELS = 77 # Pixels in a single reduced image.
 
-path = 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\reduced_data.csv' # Path to the csv file with all of the activity data.
+path = '..\\Shared Resources\\reduced_data.csv' # Path to the csv file with all of the activity data.
 # The path being used here is for the reduced data i.e. the data that has had image compression done.
 print(f"Path being used is: {path}")
 
@@ -58,7 +58,7 @@ for p in range(activity_count):
             all_samples.append(new_sample)
 
 # Once we have done this for every data sample and written to the output csv, we are done.
-with open('augmented_data.csv', 'w', newline='') as file:
+with open('..\\Shared Resources\\augmented_data.csv', 'w', newline='') as file:
 # Using csv.writer to write the list to the CSV file.
     writer = csv.writer(file)
     writer.writerows(all_samples)

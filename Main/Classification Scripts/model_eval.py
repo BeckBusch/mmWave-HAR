@@ -26,8 +26,8 @@ FRAMES_PER_SECOND = 25 # Number of frames in one second of radar data.
 STEP_SIZE = 5 # Number of frames to step through by - corresponds to ~0.5s.
 
 # Path to the model and activity to be evaluated.
-PATH = 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\CNN-LSTM+S_model.pth'
-activity_path = 'C:\\Users\\Samuel Mason\\Documents\\GitHub\\mmWave-HAR\\Main\\eval.csv'
+PATH = '..\\Trained Models\\CNN-LSTM+S_model.pth'
+activity_path = '..\\Shared Resources\\eval.csv'
 
 class CNNLSTM(nn.Module):
     def __init__(self, n_features, n_hidden, seq_len, n_layers):
@@ -176,7 +176,7 @@ def make_Tensor(array):
     return torch.from_numpy(array).float()
 
 # MinMaxScaler.
-scaler_fname = "scaler.pkl"
+scaler_fname = "..\\Trained Models\\scaler.pkl"
 scaler = joblib.load(scaler_fname)
 
 # Load in the saved model.
