@@ -45,7 +45,8 @@ for CurrentFileNumber=1:fileCount
     % Select current filename
     binFilePath = filenames(CurrentFileNumber);
     binFilePath = binFilePath(1);
-
+    
+    % Set name value in output
     finalExport(CurrentFileNumber, 1) = binFilePath;
 
     binFilePath = strcat(sourceDir, binFilePath);
@@ -66,7 +67,8 @@ for CurrentFileNumber=1:fileCount
         
         % Process range-angle responce object over the current frame
         [resp,rng_grid,ang_grid] = rngangresp(frame,[1;1]);
-    
+
+        % search the axis list for the cop limits, and use these indexes to crop the data
         lowerAngleLimit = find(ang_grid >= (-50));
         lowerAngleLimit = lowerAngleLimit(1);
         upperAngleLimit = find(ang_grid >= (50));
@@ -77,6 +79,7 @@ for CurrentFileNumber=1:fileCount
         radarClip = resp(1:rangeLimit,lowerAngleLimit:upperAngleLimit);
         radarClip = round(radarClip, 3);
 
+        % Commented-out code to visualise the cropped graph
         %{
         imagesc(ang_grid(lowerAngleLimit:upperAngleLimit),rng_grid(1:rangeLimit),abs(resp));
         xlabel('Angle');
@@ -92,6 +95,7 @@ for CurrentFileNumber=1:fileCount
 
 end
 
+% Export the data
 finalTable = cell2table(finalExport);
 writetable(finalTable, "E:/Data/Output/" + outputName + ".csv");
 

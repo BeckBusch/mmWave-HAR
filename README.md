@@ -1,9 +1,7 @@
 # mmWave HAR
 ## University of Auckland ECSE Part 4 Project - Project 77 - mmWave Human Activity Recognition
 
-This project concerns the development of a human activity recognition system using mmWave radar, that can operate and return readings in real time.
-
-TODO: make better   
+This project concerns the development of a human activity recognition system using mmWave radar, that can classify and detect sequences of actions.
 
 ### Main
 Full source files for the project.
