@@ -25,11 +25,11 @@ sessionEndMsg = "Session Finished"
 sessionName = easygui.enterbox(welcomeMsg, "Welcome")
 
 inProgress = True # I guess this is just a worse while(true):break but idk it works
-recordingCount = 0
+recordingCount = 40
 
 while inProgress != False:
     # Prompt the user
-    check = easygui.buttonbox(recordingMsg, "Recording In Progress...", [sessionContinueMsg, sessionEndMsg])
+    check = easygui.buttonbox(recordingMsg, "Recording In Progress..." + str(recordingCount), [sessionContinueMsg, sessionEndMsg])
 
     # Check if the answer was finished
     if check == sessionEndMsg:
