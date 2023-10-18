@@ -15,7 +15,7 @@ class ClassNames(Enum):
     CLAPPING = 2
     WAVING = 3
     JUMPINGJACKS = 4
-    EMPTY = 5
+    BLANK = 5
 
 TARGET_FRAMES = 16 # Input size to the classifier that we want to reduce to.
 INTERPOLATION_FRAMES = TARGET_FRAMES + 2 # Need 2 additional frames, 1 for final frame which is removed, and first frame is not used.
@@ -25,7 +25,7 @@ RANDOM_SEED = 33
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
 
-path = '..\\Shared Resources\\augmented_data.csv' # Path to the csv file with all of the activity data.
+path = 'C:\\GitHub\\mmWave-HAR\\Main\\Shared Resources\\augmented_data.csv' # Path to the csv file with all of the activity data.
 print(f"Path being used is: {path}")
 
 # Read in the activity data, create a dataframe for it with the rows and columns transposed for optimisation.
@@ -97,8 +97,8 @@ def format_sequences(df, count):
     # Now we need to convert the classes to a numerical (enumerated) representation.
     for i in range(len(classes)):
         this_class = classes[i].split('_')[0] # Get the class name.
-        if this_class == "empty":
-            class_nums.append(ClassNames.EMPTY.value)
+        if this_class == "blank":
+            class_nums.append(ClassNames.BLANK.value)
         elif this_class == "clapping":
             class_nums.append(ClassNames.CLAPPING.value)
         elif this_class == "jumpingjacks":
@@ -163,7 +163,7 @@ X = np.reshape(X, (activity_count, TARGET_FRAMES, Y_DIM, X_DIM))
 print("Fitting finished")
 
 # Save the MinMaxScaler
-scaler_fname = "..\\Trained Models\\scaler.pkl"
+scaler_fname = "C:\\GitHub\\mmWave-HAR\\Main\\Trained Models\\scaler.pkl"
 joblib.dump(scaler, scaler_fname) 
 
 X, y = shuffle(X, y) # Shuffle the data!
@@ -299,5 +299,5 @@ model = train_model(
 )
 
 # Save the model once training is complete.
-torch.save(model, '..\\Trained Models\\CNN-LSTM+S_model.pth')
+torch.save(model, 'C:\\GitHub\\mmWave-HAR\\Main\\Trained Models\\CNN-LSTM+S_model.pth')
 print("Model saved successfully")

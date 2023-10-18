@@ -10,7 +10,7 @@ XY_DIM = X_DIM * Y_DIM
 VERT_COMP_FACTOR = 5 # Vertical compression factor (y values) -> 7 pixels.
 HORIZ_COMP_FACTOR = 13 # Horizontal compression factor (x values) -> 11 pixels.
 
-ACTIVITY_COUNT_PER_PERSON = 1 # 20 samples of activity data was gathered for each activity, per person.
+ACTIVITY_COUNT_PER_PERSON = 60 # 20 samples of activity data was gathered for each activity, per person.
 NUM_PARTICIPANTS = 1 # Participant data was gathered from 3 people in the research team.
  
 def format_sequences(df, count, p_index):
@@ -77,7 +77,12 @@ def format_sequences(df, count, p_index):
 
 # Paths to csv files containing activity data.
 path_list = []
-path_list.append('C:\\GitHub\\mmWave-HAR\\Main\\Shared Resources\\extracted.csv')
+path_list.append('E:\\Data\\Output\\blank.csv')
+path_list.append('E:\\Data\\Output\\clapping.csv')
+path_list.append('E:\\Data\\Output\\jumping.csv')
+path_list.append('E:\\Data\\Output\\standing.csv')
+path_list.append('E:\\Data\\Output\\walking.csv')
+path_list.append('E:\\Data\\Output\\waving.csv')
 
 for path in path_list:
 
