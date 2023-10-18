@@ -26,8 +26,8 @@ FRAMES_PER_SECOND = 25 # Number of frames in one second of radar data.
 STEP_SIZE = 5 # Number of frames to step through by - corresponds to ~0.5s.
 
 # Path to the model and activity to be evaluated.
-PATH = '..\\Trained Models\\CNN-LSTM+S_model.pth'
-activity_path = '..\\Shared Resources\\eval.csv'
+PATH = 'C:\\GitHub\\mmWave-HAR\\Main\\Trained Models\\CNN-LSTM+S_model.pth'
+activity_path = 'C:\\GitHub\\mmWave-HAR\\Main\\Shared Resources\\reduced_data.csv'
 
 class CNNLSTM(nn.Module):
     def __init__(self, n_features, n_hidden, seq_len, n_layers):
@@ -70,7 +70,6 @@ seq[-1] = seq[-1].split('\n')[0] # Remove the newline character at the end.
 activity_name = seq[0] 
 seq = seq[1:] # Remove the activity name (it is a string, not complex dtype, so separate it).
 seq.insert(0, activity_name)
-
 # Image dimensions are based on the radar configuration, these need to be set and changed inside of this file accordingly.
 X_DIM = 11 #36 # For example.
 Y_DIM = 7 #18 # For example.
@@ -105,27 +104,28 @@ def format_seq(seq):
     yptr = 0
 
     # Need to convert the class to a numerical (enumerated) representation.
-    class_names = [class_name.split('_')[0], class_name.split('_')[1]]
+    class_names = [class_name.split('_')[0]]
 
-    class_nums = []
-    for this_class in class_names:
-        if this_class == "empty":
-            class_num = ClassNames.EMPTY.value
-        elif this_class == "clapping":
-            class_num = ClassNames.CLAPPING.value
-        elif this_class == "jumpingjacks":
-            class_num = ClassNames.JUMPINGJACKS.value
-        elif this_class == "standing":
-            class_num = ClassNames.STANDING.value
-        elif this_class == "walking":
-            class_num = ClassNames.WALKING.value
-        elif this_class == "waving":
-            class_num = ClassNames.WAVING.value
-        class_nums.append(class_num)
+    # class_nums = []
+    # for this_class in class_names:
+    #     if this_class == "empty":
+    #         class_num = ClassNames.EMPTY.value
+    #     elif this_class == "clapping":
+    #         class_num = ClassNames.CLAPPING.value
+    #     elif this_class == "jumpingjacks":
+    #         class_num = ClassNames.JUMPINGJACKS.value
+    #     elif this_class == "standing":
+    #         class_num = ClassNames.STANDING.value
+    #     elif this_class == "walking":
+    #         class_num = ClassNames.WALKING.value
+    #     elif this_class == "waving":
+    #         class_num = ClassNames.WAVING.value
+    #     class_nums.append(class_num)
 
     # At the end of this code execution, pt will contain the frames for this activity.
     # Class nums is a numerical representation of the class(es).
-    return np.array(pt), np.array(class_nums)
+    print(class_names)
+    return np.array(pt), class_names
 
 # Format the data from csv.
 X, y = format_seq(seq)
@@ -176,7 +176,7 @@ def make_Tensor(array):
     return torch.from_numpy(array).float()
 
 # MinMaxScaler.
-scaler_fname = "..\\Trained Models\\scaler.pkl"
+scaler_fname = "C:\\GitHub\\mmWave-HAR\\Main\\Trained Models\\scaler.pkl"
 scaler = joblib.load(scaler_fname)
 
 # Load in the saved model.
@@ -203,10 +203,11 @@ for _ in range(pass_count):
         preds.append(y_pred)
         pred_names.append(ClassNames(round(y_pred)).name)
 
-y = make_Tensor(y)
-y1 = torch.flatten(y[0]).item() # First class.
+# y = make_Tensor(y)
+print(y)
+# y1 = torch.flatten(y[0]).item() # First class.
 # y2 = torch.flatten(y[1]).item()
-print(f"Actual activity class is: {ClassNames(y1).name}")
+# print(f"Actual activity class is: {ClassNames(y1).name}")
 
 print(preds)
 print(pred_names)

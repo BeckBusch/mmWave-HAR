@@ -10,8 +10,8 @@ XY_DIM = X_DIM * Y_DIM
 VERT_COMP_FACTOR = 5 # Vertical compression factor (y values) -> 7 pixels.
 HORIZ_COMP_FACTOR = 13 # Horizontal compression factor (x values) -> 11 pixels.
 
-ACTIVITY_COUNT_PER_PERSON = 20 # 20 samples of activity data was gathered for each activity, per person.
-NUM_PARTICIPANTS = 3 # Participant data was gathered from 3 people in the research team.
+ACTIVITY_COUNT_PER_PERSON = 1 # 20 samples of activity data was gathered for each activity, per person.
+NUM_PARTICIPANTS = 1 # Participant data was gathered from 3 people in the research team.
  
 def format_sequences(df, count, p_index):
 
@@ -65,34 +65,19 @@ def format_sequences(df, count, p_index):
     
     # If we are only beginning to read in activities, write permissions should be granted in case the file doesn't exist yet, otherwise append.
     if p_index == 0:
-        with open('..\\Shared Resources\\reduced_data.csv', 'w', newline='') as file:
+        with open('C:\\GitHub\\mmWave-HAR\\Main\\Shared Resources\\reduced_data.csv', 'w', newline='') as file:
         # Using csv.writer to write the list to the CSV file.
             writer = csv.writer(file)
             writer.writerows(pT)
     else:
-        with open('..\\Shared Resources\\reduced_data.csv', 'a', newline='') as file:
+        with open('C:\\GitHub\\mmWave-HAR\\Main\\Shared Resources\\reduced_data.csv', 'a', newline='') as file:
         # Using csv.writer to write the list to the CSV file.
             writer = csv.writer(file)
             writer.writerows(pT)
 
 # Paths to csv files containing activity data.
 path_list = []
-path_list.append('..\\Shared Resources\\Blank.csv')
-path_list.append('..\\Shared Resources\\KevinClapping.csv')
-path_list.append('..\\Shared Resources\\KevinJacks.csv')
-path_list.append('..\\Shared Resources\\KevinStanding.csv')
-path_list.append('..\\Shared Resources\\KevinWalking.csv')
-path_list.append('..\\Shared Resources\\KevinWaving.csv')
-path_list.append('..\\Shared Resources\\SamClapping.csv')
-path_list.append('..\\Shared Resources\\SamJacks.csv')
-path_list.append('..\\Shared Resources\\SamStanding.csv')
-path_list.append('..\\Shared Resources\\SamWalking.csv')
-path_list.append('..\\Shared Resources\\SamWaving.csv')
-path_list.append('..\\Shared Resources\\BeckClapping.csv')
-path_list.append('..\\Shared Resources\\BeckJacks.csv')
-path_list.append('..\\Shared Resources\\BeckStanding.csv')
-path_list.append('..\\Shared Resources\\BeckWalking.csv')
-path_list.append('..\\Shared Resources\\BeckWaving.csv')
+path_list.append('C:\\GitHub\\mmWave-HAR\\Main\\Shared Resources\\extracted.csv')
 
 for path in path_list:
 
@@ -101,7 +86,7 @@ for path in path_list:
     del activity_data[0] # Remove the headers at the top of the file.
 
     # Blank contains more sequences than the other files.
-    if path == '..\\Shared Resources\\Blank.csv':
+    if path == 'C:\\GitHub\\mmWave-HAR\\Main\\Shared Resources\\Blank.csv':
         activity_count = ACTIVITY_COUNT_PER_PERSON * NUM_PARTICIPANTS
     else:
         activity_count = ACTIVITY_COUNT_PER_PERSON

@@ -5,10 +5,9 @@
 % Clear Workspace
 clear;
 
-outputName = input("Output CSV name? ", "s");
-
+outputName = 'extracted';
 % Setup .bin File List
-sourceDir = 'E:/Records/Extraction/';
+sourceDir = 'C:/GitHub/mmWave-HAR/Main/Live Demo/';
 list = dir(strcat(sourceDir, '*.bin'));
 filenames = {list.name};
 fileCount = length(filenames);
@@ -97,6 +96,8 @@ end
 
 % Export the data
 finalTable = cell2table(finalExport);
-writetable(finalTable, "E:/Data/Output/" + outputName + ".csv");
+writetable(finalTable, "C:/GitHub/mmWave-HAR/Main/Shared Resources/" + outputName + ".csv");
 
+writelines("Example String","C:/GitHub/mmWave-HAR/Main/Live Demo/done")
+exit
 % EOF
